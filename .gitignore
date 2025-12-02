@@ -3,4 +3,4 @@ HANDOFF.md
 CHANGELOG.md
 
 venv/
-pycache/
+*__pycache__/

@@ -1,0 +1,6 @@
+opencv-python
+pyside6
+mediapipe
+insightface
+numpy
+scipy
