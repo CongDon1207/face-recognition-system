@@ -1,7 +1,7 @@
 FaceRecognitionSystem/
 │
 ├─ main.py                     # [USER 1] File chạy chính
-├─ requirements.txt            # [Team] Danh sách thư viện (opencv, pyqt6, insightface…)
+├─ requirements.txt            # [Team] Danh sách thư viện (opencv, pyside6, insightface…)
 │
 ├─ common/                     # [USER 1] Các công cụ nền tảng
 │  ├─ __init__.py
@@ -10,6 +10,10 @@ FaceRecognitionSystem/
 │
 ├─ UI/                         # [CHIA NHAU] Code giao diện
 │  ├─ __init__.py
+│  ├─ assets/                  # [MỚI] Tài nguyên (Icons, Images, Styles)
+│  │  ├─ icons/
+│  │  ├─ images/
+│  │  └─ theme.qss
 │  ├─ base_ui.py               # [USER 1] Cửa sổ cha, Layout chính, Hiển thị Camera
 │  ├─ enroll_ui.py             # [USER 2] Màn hình đăng ký (kế thừa base_ui)
 │  └─ auth_ui.py               # [USER 3] Màn hình xác thực (kế thừa base_ui)
@@ -29,5 +33,5 @@ FaceRecognitionSystem/
 │     └─ liveness.py           # Logic tính EAR (mắt), Head Pose (đầu)
 │
 ├─ data/                       # [USER 2] Quản lý cấu trúc folder này
-│  ├─ database.json
-│  └─ embeddings/
+│  ├─ database.json            # File metadata người dùng
+│  └─ embeddings/              # Thư mục chứa vector khuôn mặt
