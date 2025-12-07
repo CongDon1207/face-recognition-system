@@ -1,2 +1,5 @@
 venv/
 *__pycache__/
+
+HANDOFF.md
+CHANGELOG.md

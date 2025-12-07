@@ -1,0 +1,27 @@
+# Cấu trúc thư mục (Project Structure)
+
+```text
+FaceRecognitionSystem/
+├── UI/                         # Giao diện người dùng (PySide6)
+│   ├── components/             # Các thành phần tái sử dụng
+│   │   └── sidebar.py          # Thanh điều hướng trái
+│   ├── enrollment/             # Module quản lý đăng ký khuôn mặt
+│   │   ├── steps/              # Các bước trong quy trình enroll
+│   │   │   ├── profile_step.py # Bước 1: Nhập thông tin
+│   │   │   ├── capture_step.py # Bước 2: Chụp ảnh & Checklist
+│   │   │   └── success_step.py # Bước 3: Thông báo thành công
+│   │   └── enroll_ui.py        # Quản lý luồng enroll (Manager)
+│   ├── base_ui.py              # Cửa sổ chính (MainWindow)
+│   └── styles.py               # Quản lý Theme & Stylesheet
+├── assets/                     # Tài nguyên (ảnh, icon...)
+├── data/                       # Dữ liệu khuôn mặt, database
+├── docs/                       # Tài liệu dự án
+│   ├── guide/                  # Hướng dẫn chi tiết
+│   │   ├── RUN.md              # Hướng dẫn chạy
+│   │   └── SETUP.md            # Hướng dẫn cài đặt
+│   └── STRUCTURE.md            # Cấu trúc thư mục
+├── modules/                    # Logic xử lý (Face Rec, Camera...)
+├── venv/                       # Môi trường ảo Python
+├── main.py                     # File khởi chạy
+└── requirements.txt            # Danh sách thư viện
+```
