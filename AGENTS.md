@@ -27,11 +27,15 @@
 - Before editing or creating a new file, you must read the related files.
 - When reading a file, you must go through the entire code in that file to fully understand the context.
 
+
 ## 3. Pre-Task Checklist
 Before starting a new conversation, confirm you have read and understood:
+- **MANDATORY**: Read files in `docs/` (especially `STRUCTURE.md`) to understand the current context and project state.
 - The user's immediate request and overall goal (PRD or ticket).
-- Other relevant files in `docs/*`.
 - Project configuration or execution files: docker-compose*.yml, .env*.
+
+**Structure Maintenance:**
+- If the project structure changes (files added/moved/deleted), you MUST update `docs/STRUCTURE.md` immediately.
 
 ## 4. Response and Execution Protocol
 **Response format (every reply):**
@@ -54,6 +58,8 @@ Before starting a new conversation, confirm you have read and understood:
 **Context7 - Official documentation search**
 - Use when: checking official docs for signatures, flags, breaking changes, migrations, or configuration; confirming behavior or versioning instead of guessing.
 
+**Sequential Thinking Protocol**
+- Use when: the user's request requires a step-by-step analysis or when you need to break down a complex task into smaller, manageable steps.
 
 **Web Search - General and real-time info**
 - Use when: looking for release notes, incidents, ecosystem changes, credible blog posts, or non-code context such as pricing, service status, or announcements.
