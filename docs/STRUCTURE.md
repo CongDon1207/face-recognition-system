@@ -12,8 +12,9 @@ FaceRecognitionSystem/
 │   │   │   └── success_step.py # Bước 3: Thông báo thành công
 │   │   └── enroll_ui.py        # Quản lý luồng enroll (Manager)
 │   ├── base_ui.py              # Cửa sổ chính (MainWindow)
-│   └── styles.py               # Quản lý Theme & Stylesheet
-├── assets/                     # Tài nguyên (ảnh, icon...)
+│   ├── styles.py               # Quản lý Theme & Stylesheet
+│   └── assets/                 # Tài nguyên (ảnh, icon...)
+├── common/                     # Tiện ích chung
 ├── data/                       # Dữ liệu khuôn mặt, database
 ├── docs/                       # Tài liệu dự án
 │   ├── guide/                  # Hướng dẫn chi tiết
