@@ -5,6 +5,8 @@ FaceRecognitionSystem/
 ├── UI/                         # Giao diện người dùng (PySide6)
 │   ├── components/             # Các thành phần tái sử dụng
 │   │   └── sidebar.py          # Thanh điều hướng trái
+│   ├── authentication/         # Module xác thực khuôn mặt
+│   │   └── auth_ui.py          # Giao diện Authentication (Camera + Liveness)
 │   ├── enrollment/             # Module quản lý đăng ký khuôn mặt
 │   │   ├── steps/              # Các bước trong quy trình enroll
 │   │   │   ├── profile_step.py # Bước 1: Nhập thông tin

@@ -4,6 +4,7 @@ from PySide6.QtCore import Qt, QSize
 from PySide6.QtGui import QIcon
 from UI.styles import Theme
 from UI.enrollment.enroll_ui import EnrollmentView
+from UI.authentication.auth_ui import AuthenticationView
 from UI.components.sidebar import Sidebar
 
 class BaseWindow(QMainWindow):
@@ -43,8 +44,9 @@ class BaseWindow(QMainWindow):
         # 0: Dashboard
         self.pages.addWidget(self.create_placeholder_page("Dashboard View"))
         
-        # 1: Authentication
-        self.pages.addWidget(self.create_placeholder_page("Authentication View"))
+        # 1: Authentication (Real UI)
+        self.auth_view = AuthenticationView()
+        self.pages.addWidget(self.auth_view)
         
         # 2: Enrollment (Real UI)
         self.enroll_view = EnrollmentView()
@@ -63,6 +65,8 @@ class BaseWindow(QMainWindow):
         self.sidebar.set_active_index(1)
         self.pages.setCurrentIndex(1)
         self.page_title.setText("Authentication")
+        # Start authentication when switching to this view
+        self.auth_view.start_authentication()
 
     def setup_sidebar(self):
         self.sidebar = Sidebar()
