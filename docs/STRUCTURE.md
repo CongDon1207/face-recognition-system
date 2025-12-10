@@ -22,6 +22,9 @@ FaceRecognitionSystem/
 │   │   └── SETUP.md            # Hướng dẫn cài đặt
 │   └── STRUCTURE.md            # Cấu trúc thư mục
 ├── modules/                    # Logic xử lý (Face Rec, Camera...)
+│   ├── database.py             # Quản lý SQLite (users, embeddings)
+│   ├── face_analyzer.py        # Head Pose, Distance Check, Embedding
+│   └── camera.py               # Thread đọc camera
 ├── venv/                       # Môi trường ảo Python
 ├── main.py                     # File khởi chạy
 └── requirements.txt            # Danh sách thư viện
