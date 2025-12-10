@@ -16,16 +16,17 @@ FaceRecognitionSystem/
     styles.py                 # Theme & stylesheet
     assets/                   # Tài nguyên (ảnh, icon...)
   common/                     # Tiện ích chung
+    camera.py                 # Thread đọc camera
   data/                       # Dữ liệu khuôn mặt, database
   docs/                       # Tài liệu dự án
     guide/                    # Hướng dẫn chi tiết
       RUN.md                  # Hướng dẫn chạy
       SETUP.md                # Hướng dẫn cài đặt
+    ALGORITHM_POSE.md         # Tài liệu thuật toán Pose
     STRUCTURE.md              # Cấu trúc thư mục
-  modules/                    # Logic xử lý (Face Rec, Camera...)
+  modules/                    # Logic xử lý (Face Rec...)
     database.py               # Quản lý SQLite (users, embeddings)
     face_analyzer.py          # Head pose, distance check, embedding
-    camera.py                 # Thread đọc camera
   venv/                       # Môi trường ảo Python
   main.py                     # File khởi chạy
   requirements.txt            # Danh sách thư viện
