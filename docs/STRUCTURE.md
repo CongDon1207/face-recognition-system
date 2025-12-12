@@ -1,4 +1,4 @@
-# Cấu trúc thư mục (Project Structure)
+﻿# Cấu trúc thư mục (Project Structure)
 
 ```text
 FaceRecognitionSystem/
@@ -31,4 +31,5 @@ FaceRecognitionSystem/
   main.py                     # File khởi chạy
   requirements.txt            # Danh sách thư viện
 ```
+
 
