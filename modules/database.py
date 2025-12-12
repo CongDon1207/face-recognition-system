@@ -23,7 +23,13 @@ class DatabaseManager:
 
     def _get_connection(self) -> sqlite3.Connection:
         """Tạo kết nối mới đến database."""
-        return sqlite3.connect(str(self.db_path))
+        conn = sqlite3.connect(str(self.db_path))
+        # Bật foreign keys để ON DELETE CASCADE có hiệu lực
+        try:
+            conn.execute("PRAGMA foreign_keys = ON;")
+        except sqlite3.Error:
+            pass
+        return conn
 
     def _init_db(self):
         """Khởi tạo các bảng nếu chưa tồn tại."""
@@ -121,3 +127,38 @@ class DatabaseManager:
         filepath = user_dir / filename
         cv2.imwrite(str(filepath), image)
         return str(filepath)
+
+    def enroll_user_with_embeddings(
+        self,
+        user_id: str,
+        fullname: str,
+        avatar_path: str | None,
+        embeddings_data: list[tuple[np.ndarray, str, str | None]],
+    ) -> bool:
+        """
+        Ghi enrollment theo 1 transaction:
+        - Thêm user trước
+        - Thêm embeddings sau
+        Nếu bất kỳ bước nào fail -> rollback, tránh embeddings mồ côi.
+        embeddings_data: [(embedding, pose_type, image_path), ...]
+        """
+        try:
+            with self._get_connection() as conn:
+                cursor = conn.cursor()
+                cursor.execute(
+                    "INSERT INTO users (id, fullname, avatar_path) VALUES (?, ?, ?)",
+                    (user_id, fullname, avatar_path),
+                )
+                for embedding, pose_type, image_path in embeddings_data:
+                    cursor.execute(
+                        """INSERT INTO face_embeddings
+                           (user_id, embedding, pose_type, image_path)
+                           VALUES (?, ?, ?, ?)""",
+                        (user_id, embedding.tobytes(), pose_type, image_path),
+                    )
+                conn.commit()
+            return True
+        except sqlite3.IntegrityError:
+            return False
+        except sqlite3.Error:
+            return False
