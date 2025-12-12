@@ -82,6 +82,9 @@ class FaceProcessingThread(QThread):
 
     def stop(self):
         self.running = False
+        self.frame_mutex.lock()
+        self.latest_frame = None  # Clear để tránh memory leak
+        self.frame_mutex.unlock()
         self.condition.wakeOne()
         self.wait()
 

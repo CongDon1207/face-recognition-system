@@ -75,7 +75,12 @@ class CaptureStep(CaptureStepUI, QWidget):
             f"color: {Theme.TEXT_GRAY}; font-size: 16px;"
         )
 
-        if self.camera_thread is None or not self.camera_thread.isRunning():
+        # Fix race condition: dừng thread cũ trước khi tạo mới
+        if self.camera_thread and self.camera_thread.isRunning():
+            self.camera_thread.stop()
+            self.camera_thread = None
+
+        if self.camera_thread is None:
             self.camera_thread = CameraThread()
             self.camera_thread.frame_captured.connect(self._on_frame)
             self.camera_thread.error_occurred.connect(self._on_camera_error)
