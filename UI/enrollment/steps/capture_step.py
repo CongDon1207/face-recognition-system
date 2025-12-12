@@ -56,8 +56,6 @@ class CaptureStep(QWidget):
         self.processor_thread.model_loaded.connect(self._on_models_loaded)
         self.processor_thread.start()
 
-        self.processor_thread.start()
-
         self.last_ai_result = {}  # Initialize as empty dict for new logic
 
         self._build_ui()

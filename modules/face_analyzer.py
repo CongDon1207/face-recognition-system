@@ -109,8 +109,7 @@ class FaceAnalyzer:
         faces = self.insightface.get(frame)
         if not faces:
             # Reset pose tracking if lost face
-            self._stable_frames = 0
-            self._pose_history.clear()
+            self.reset_pose_state()
             return {
                 "has_face": False,
                 "distance_status": DistanceStatus.NO_FACE,
