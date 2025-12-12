@@ -14,6 +14,8 @@ class FaceProcessingThread(QThread):
     model_loaded = Signal(bool, str)  # success, message
     result_ready = Signal(dict)  # Stores full analysis result
 
+    PROCESS_EVERY_N_FRAMES = 3  # Giảm tải: chỉ xử lý 1/3 frame
+
     def __init__(self):
         super().__init__()
         self.face_analyzer: FaceAnalyzer | None = None
@@ -23,6 +25,7 @@ class FaceProcessingThread(QThread):
         self.frame_mutex = QMutex()
         self.condition = QWaitCondition()
         self.is_models_loaded = False
+        self._frame_counter = 0
 
     def initialize_models(self):
         """Khởi tạo model InsightFace + MediaPipe."""
@@ -39,6 +42,9 @@ class FaceProcessingThread(QThread):
     def update_frame(self, frame, target_pose: PoseType):
         """Nhận frame mới và pose mục tiêu cần kiểm tra."""
         if not self.is_models_loaded:
+            return
+        self._frame_counter += 1
+        if self._frame_counter % self.PROCESS_EVERY_N_FRAMES != 0:
             return
         self.frame_mutex.lock()
         self.latest_frame = frame.copy()
@@ -83,6 +89,5 @@ class FaceProcessingThread(QThread):
         """Reset baseline pose khi bắt đầu sequence mới."""
         if self.face_analyzer is not None:
             self.face_analyzer.reset_pose_state()
-
 
 

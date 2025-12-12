@@ -267,9 +267,9 @@ class FaceAnalyzer:
             debug_value = h_ratio
             cfg = RATIO_THRESHOLDS["right"]
             if h_ratio < (cfg["h_max"] + hysteresis):
-                 if cfg["v_lax_min"] <= v_ratio <= cfg["v_lax_max"]:
+                if cfg["v_lax_min"] <= v_ratio <= cfg["v_lax_max"]:
                     pose_ok = True
-                 else:
+                else:
                     msg = "Giữ độ cao đầu bình thường."
             else:
                 msg = "Xoay PHẢI thêm chút nữa."

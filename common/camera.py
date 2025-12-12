@@ -5,6 +5,7 @@ Sử dụng QThread để không block UI.
 import cv2
 import numpy as np
 from PySide6.QtCore import QThread, Signal
+import os
 
 
 class CameraThread(QThread):
@@ -23,13 +24,22 @@ class CameraThread(QThread):
 
     def run(self):
         """Vòng lặp chính đọc frame từ camera."""
-        self._cap = cv2.VideoCapture(self.camera_id)
+        # Ưu tiên backend DirectShow trên Windows để giảm độ trễ
+        if os.name == "nt":
+            self._cap = cv2.VideoCapture(self.camera_id, cv2.CAP_DSHOW)
+        else:
+            self._cap = cv2.VideoCapture(self.camera_id)
         
         if not self._cap.isOpened():
             self.error_occurred.emit("Không thể mở camera")
             return
         
         # Thiết lập camera
+        try:
+            # Giảm buffer để tránh lag khung hình
+            self._cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
+        except Exception:
+            pass
         self._cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         self._cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         self._cap.set(cv2.CAP_PROP_FPS, 30)

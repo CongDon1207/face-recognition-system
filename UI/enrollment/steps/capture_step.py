@@ -301,15 +301,20 @@ class CaptureStep(QWidget):
              self.distance_label.setText("❌ Dữ liệu lỗi (No embedding/frame)")
              return
 
-        # Crop khuôn mặt từ frame đã analyze (đảm bảo box khớp với frame)
+        # Crop khuôn mặt từ frame đã analyze (đảm bảo box nằm trong biên ảnh)
         x, y, w, h = face_box
-        # Expand box một chút để crop đẹp hơn (tùy chọn, ở đây giữ nguyên logic cũ hoặc thêm padding)
-        # Logic cũ: cropped = frame[y:y+h, x:x+w]
-        
-        # Thêm padding an toàn
         img_h, img_w = frame_analyzed.shape[:2]
-        # x, y, w, h are integers
-        cropped = frame_analyzed[y : y + h, x : x + w]
+
+        x1 = max(0, int(x))
+        y1 = max(0, int(y))
+        x2 = min(img_w, int(x + w))
+        y2 = min(img_h, int(y + h))
+
+        if x2 <= x1 or y2 <= y1:
+            self.distance_label.setText("❌ Lỗi hộp khuôn mặt (ngoài biên)")
+            return
+
+        cropped = frame_analyzed[y1:y2, x1:x2]
         
         if cropped.size == 0:
              self.distance_label.setText("❌ Lỗi cắt ảnh")
