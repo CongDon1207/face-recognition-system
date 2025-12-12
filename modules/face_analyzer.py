@@ -42,8 +42,13 @@ RATIO_THRESHOLDS = {
 }
 
 # Nới lỏng một chút để người dùng không phải đưa mặt quá gần/xa.
-FACE_AREA_MIN_RATIO = 0.06
+FACE_AREA_MIN_RATIO = 0.3
 FACE_AREA_MAX_RATIO = 0.55  # Tăng từ 0.45 lên 0.55 để cho phép mặt gần hơn
+
+# Siết khoảng cách tối thiểu theo pose (FRONTAL cần gần hơn để embedding ổn định)
+FACE_AREA_MIN_RATIO_BY_POSE = {
+    PoseType.FRONTAL: 0.3,
+}
 
 # Số frame phải giữ ổn định để xác nhận pose (15 frames @ 30fps = 0.5s)
 STABLE_FRAMES_REQUIRED = 15
@@ -133,7 +138,9 @@ class FaceAnalyzer:
         w, h = face_box[2], face_box[3]
         ratio = (w * h) / float(frame_h * frame_w) if frame_h and frame_w else 0.0
 
-        if ratio < FACE_AREA_MIN_RATIO:
+        min_ratio = FACE_AREA_MIN_RATIO_BY_POSE.get(target_pose, FACE_AREA_MIN_RATIO)
+
+        if ratio < min_ratio:
             dist_status = DistanceStatus.TOO_FAR
         elif ratio > FACE_AREA_MAX_RATIO:
             dist_status = DistanceStatus.TOO_CLOSE

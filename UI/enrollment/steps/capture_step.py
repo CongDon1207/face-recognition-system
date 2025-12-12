@@ -27,6 +27,8 @@ class CaptureStep(QWidget):
 
     finished = Signal(list)  # (pose_type, embedding, cropped_image)
 
+    DISTANCE_STABLE_REQUIRED = 3  # Cần khoảng cách OK ổn định N lần trước khi cho chụp
+
     POSE_SEQUENCE = [
         PoseType.FRONTAL,
         PoseType.LEFT,
@@ -49,6 +51,7 @@ class CaptureStep(QWidget):
         self.captured_data: list[tuple[PoseType, np.ndarray, np.ndarray]] = []
         self.latest_frame: np.ndarray | None = None  # Lưu frame mới nhất
         self.last_yaw: float | None = None  # Khởi tạo last_yaw
+        self._distance_ok_stable = 0
 
         self.camera_thread: CameraThread | None = None
         self.processor_thread = FaceProcessingThread()
@@ -71,13 +74,31 @@ class CaptureStep(QWidget):
         camera_layout = QVBoxLayout(camera_container)
         camera_layout.setAlignment(Qt.AlignCenter)
 
+        # Khung ngoài 2 lớp (outer frame)
+        self.camera_frame = QFrame()
+        self.camera_frame.setFixedSize(410, 410)
+        self.camera_frame.setStyleSheet(
+            f"""
+            QFrame {{
+                background-color: transparent;
+                border: 2px solid {Theme.BORDER_COLOR};
+                border-radius: 16px;
+            }}
+            """
+        )
+        frame_layout = QVBoxLayout(self.camera_frame)
+        frame_layout.setContentsMargins(6, 6, 6, 6)
+        frame_layout.setAlignment(Qt.AlignCenter)
+
+        # Khung trong (inner view)
         self.camera_view = QLabel()
         self.camera_view.setAlignment(Qt.AlignCenter)
         self.camera_view.setFixedSize(400, 400)
         self.camera_view.setStyleSheet(
-            f"background-color: #000; border: 3px solid {Theme.PRIMARY}; border-radius: 200px;"
+            f"background-color: #000; border: 4px solid {Theme.PRIMARY}; border-radius: 12px;"
         )
-        camera_layout.addWidget(self.camera_view)
+        frame_layout.addWidget(self.camera_view)
+        camera_layout.addWidget(self.camera_frame)
 
         self.instruction_label = QLabel("Đang tải mô hình AI...")
         self.instruction_label.setAlignment(Qt.AlignCenter)
@@ -173,8 +194,8 @@ class CaptureStep(QWidget):
 
         self.camera_view.setText("⌛\n\nĐang khởi động camera...")
         self.camera_view.setStyleSheet(
-            f"background-color: #000; border: 3px solid {Theme.PRIMARY}; "
-            f"border-radius: 200px; color: {Theme.TEXT_GRAY}; font-size: 16px;"
+            f"background-color: #000; border: 4px solid {Theme.PRIMARY}; border-radius: 12px; "
+            f"color: {Theme.TEXT_GRAY}; font-size: 16px;"
         )
 
         if self.camera_thread is None or not self.camera_thread.isRunning():
@@ -201,7 +222,7 @@ class CaptureStep(QWidget):
         # Clear text trong camera_view để sẵn sàng hiển thị frame
         self.camera_view.clear()
         self.camera_view.setStyleSheet(
-            f"background-color: #000; border: 3px solid {Theme.PRIMARY}; border-radius: 200px;"
+            f"background-color: #000; border: 4px solid {Theme.PRIMARY}; border-radius: 12px;"
         )
         self.distance_label.setText("")
         self._update_instruction()
@@ -253,7 +274,10 @@ class CaptureStep(QWidget):
         pose_ok = result["pose_ok"]
         self.last_yaw = result["yaw"]
         
-        # Cập nhật UI hướng dẫn
+        # Cập nhật UI hướng dẫn + ổn định khoảng cách
+        if distance_status != DistanceStatus.OK:
+            self._distance_ok_stable = 0
+
         if distance_status == DistanceStatus.NO_FACE:
             self.distance_label.setText("❌ Không thấy khuôn mặt")
             self.distance_label.setStyleSheet("color: #FF6B6B; font-size: 16px;")
@@ -267,15 +291,20 @@ class CaptureStep(QWidget):
             self.distance_label.setStyleSheet("color: #FFD700; font-size: 16px;")
             self.capture_btn.setEnabled(False)
         else:
+            self._distance_ok_stable += 1
             # Distance OK -> Check Pose
-            if pose_ok:
-                 self.distance_label.setText(f"✅ {pose_instruction}")
-                 self.distance_label.setStyleSheet(f"color: {Theme.SECONDARY_GREEN}; font-size: 16px;")
-                 self.capture_btn.setEnabled(True)
+            if pose_ok and self._distance_ok_stable >= self.DISTANCE_STABLE_REQUIRED:
+                self.distance_label.setText(f"✅ {pose_instruction}")
+                self.distance_label.setStyleSheet(f"color: {Theme.SECONDARY_GREEN}; font-size: 16px;")
+                self.capture_btn.setEnabled(True)
+            elif pose_ok:
+                self.distance_label.setText(f"✅ {pose_instruction} (Giữ khoảng cách ổn định)")
+                self.distance_label.setStyleSheet(f"color: {Theme.SECONDARY_GREEN}; font-size: 16px;")
+                self.capture_btn.setEnabled(False)
             else:
-                 self.distance_label.setText(f"ℹ️ {pose_instruction}")
-                 self.distance_label.setStyleSheet("color: #FFD700; font-size: 16px;")
-                 self.capture_btn.setEnabled(False)
+                self.distance_label.setText(f"ℹ️ {pose_instruction}")
+                self.distance_label.setStyleSheet("color: #FFD700; font-size: 16px;")
+                self.capture_btn.setEnabled(False)
 
     def _on_manual_capture(self):
         """Xử lý khi người dùng nhấn nút Chụp - Tối ưu hóa: Dùng luôn kết quả AI đã cache."""
@@ -305,10 +334,14 @@ class CaptureStep(QWidget):
         x, y, w, h = face_box
         img_h, img_w = frame_analyzed.shape[:2]
 
-        x1 = max(0, int(x))
-        y1 = max(0, int(y))
-        x2 = min(img_w, int(x + w))
-        y2 = min(img_h, int(y + h))
+        # Nới rộng box một chút để crop thoáng hơn, rồi clamp lại biên ảnh
+        pad_w = int(w * 0.15)
+        pad_h = int(h * 0.20)
+
+        x1 = max(0, int(x - pad_w))
+        y1 = max(0, int(y - pad_h))
+        x2 = min(img_w, int(x + w + pad_w))
+        y2 = min(img_h, int(y + h + pad_h))
 
         if x2 <= x1 or y2 <= y1:
             self.distance_label.setText("❌ Lỗi hộp khuôn mặt (ngoài biên)")
@@ -358,7 +391,12 @@ class CaptureStep(QWidget):
             
         h, w = display_frame.shape[:2]
         color_bgr = self._hex_to_bgr(border_color)
-        cv2.rectangle(display_frame, (10, 10), (w - 10, h - 10), color_bgr, 3)
+
+        # Vẽ khung oval hướng dẫn 1 viền là đủ
+        min_dim = min(h, w)
+        center = (w // 2, h // 2)
+        axes = (int(min_dim * 0.36), int(min_dim * 0.48))
+        cv2.ellipse(display_frame, center, axes, 0, 0, 360, color_bgr, 4)
 
         # Hiển thị giá trị Ratio ở góc dưới bên trái để debug
         yaw_text = "Ratio: --"
@@ -401,7 +439,7 @@ class CaptureStep(QWidget):
         if self.camera_view.text():
             self.camera_view.clear()
             self.camera_view.setStyleSheet(
-                f"background-color: #000; border: 3px solid {Theme.PRIMARY}; border-radius: 200px;"
+                f"background-color: #000; border: 4px solid {Theme.PRIMARY}; border-radius: 12px;"
             )
         
         rgb = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
