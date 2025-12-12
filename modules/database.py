@@ -117,16 +117,23 @@ class DatabaseManager:
             cursor.execute("SELECT 1 FROM users WHERE id = ?", (user_id,))
             return cursor.fetchone() is not None
 
-    def save_face_image(self, user_id: str, pose_type: str, image: np.ndarray) -> str:
+    def save_face_image(self, user_id: str, pose_type: str, image: np.ndarray) -> str | None:
         """Lưu ảnh khuôn mặt vào thư mục data/faces/{user_id}/."""
         import cv2
-        user_dir = FACES_DIR / user_id
-        user_dir.mkdir(parents=True, exist_ok=True)
-        
-        filename = f"{pose_type.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
-        filepath = user_dir / filename
-        cv2.imwrite(str(filepath), image)
-        return str(filepath)
+        try:
+            user_dir = FACES_DIR / user_id
+            user_dir.mkdir(parents=True, exist_ok=True)
+            
+            filename = f"{pose_type.lower()}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.jpg"
+            filepath = user_dir / filename
+            success = cv2.imwrite(str(filepath), image)
+            if not success:
+                print(f"Failed to write image: {filepath}")
+                return None
+            return str(filepath)
+        except Exception as e:
+            print(f"Error saving face image: {e}")
+            return None
 
     def enroll_user_with_embeddings(
         self,

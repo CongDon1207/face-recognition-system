@@ -64,6 +64,9 @@ class CameraThread(QThread):
         """Dừng thread camera."""
         self._running = False
         self.wait()
+        # Đảm bảo release camera nếu thread crash hoặc stop bất thường
+        if self._cap and self._cap.isOpened():
+            self._cap.release()
 
     def is_running(self) -> bool:
         """Kiểm tra thread có đang chạy không."""
