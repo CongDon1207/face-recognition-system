@@ -4,6 +4,7 @@ class Theme:
     PRIMARY = "#00f3ff"         # Cyan Neon
     SECONDARY_GREEN = "#00ff9d" # Success Green
     SECONDARY_RED = "#ff4d4d"   # Alert Red
+    DANGER_RED = SECONDARY_RED  # Alias
     TEXT_WHITE = "#ffffff"
     TEXT_GRAY = "#a0a0a0"
     
