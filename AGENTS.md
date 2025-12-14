@@ -30,9 +30,9 @@
 
 ## 3. Pre-Task Checklist
 Before starting a new conversation, confirm you have read and understood:
-- **MANDATORY**: Read files in `docs/` (especially `STRUCTURE.md`) to understand the current context and project state.
+- **MANDATORY**: Read ALL files under `docs/` recursively (including subfolders like `docs/guide/`), especially `STRUCTURE.md`, to understand the current context and project state.
 - The user's immediate request and overall goal (PRD or ticket).
-- Project configuration or execution files: docker-compose*.yml, .env*.
+- If the task involves code changes: read the full file(s) you will modify, plus any directly-referenced modules/call sites needed to understand the behavior.
 
 **Structure Maintenance:**
 - If the project structure changes (files added/moved/deleted), you MUST update `docs/STRUCTURE.md` immediately.
