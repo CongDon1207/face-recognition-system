@@ -10,7 +10,7 @@
 - File Length Limit: Keep every file under 300 LOC; if a change would exceed this, pause and propose a refactor or split plan.
 - Configuration and Secrets: Load all secrets or config from environment variables only; never hardcode.
 - When writing code, aim for simplicity and readability, not just brevity. Short code that is hard to read is worse than slightly longer code that is clear.
-- Clean Up Temporary Files: Delete any temporary test files immediately after use.
+- Clean Up Temporary Files: If you create temporary MRE scripts/tests for verification, delete them after you confirm results (do not commit), unless the user explicitly asks to keep them as regression tests.
 
 ### Core Directives
 - WRITE CODE ONLY TO SPEC.
@@ -50,9 +50,8 @@ Before starting a new conversation, confirm you have read and understood:
 - If you hit permission or resource errors, report them clearly and suggest safe manual steps.
 - Do not add new dependencies unless absolutely required and pre-approved.
 
-
 ## 6. MCP Tool Usage Protocol - Agent Rules
-**Primary directive:** Always choose the most specific tool. Call MCP tools only when necessary; never use them to summarize known context.
+**Primary directive:** Always choose the most specific tool. Prefer repo-local evidence first. Call MCP tools only when necessary; never use them to summarize known context.
 
 
 **Context7 - Official documentation search**
@@ -121,5 +120,3 @@ Before starting a new conversation, confirm you have read and understood:
 - **Communicate Clearly**: Provide regular updates on progress and findings
 - **Stay Focused**: Address the specific bug without unnecessary changes
 - **Test Thoroughly**: Verify fixes work in various scenarios and environments
-
-
