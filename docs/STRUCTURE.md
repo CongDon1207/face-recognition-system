@@ -23,9 +23,10 @@ FaceRecognitionSystem/
 │   │   ├── enroll_ui.py            # Manager 3-step wizard
 │   │   └── 📁 steps/
 │   │       ├── profile_step.py     # Bước 1: Nhập thông tin (MSSV, Tên)
-│   │       ├── capture_step.py     # Bước 2: Chụp 5 góc (UI logic)
-│   │       ├── capture_ui.py       # Bước 2: UI components riêng
-│   │       ├── face_processing_thread.py  # AI thread xử lý pose/distance
+│   │       ├── 📁 capture_step/    # Bước 2: Module chụp 5 góc
+│   │       │   ├── capture_step.py           # UI logic chính
+│   │       │   ├── capture_ui.py             # UI components riêng
+│   │       │   └── face_processing_thread.py # AI thread xử lý pose/distance
 │   │       └── success_step.py     # Bước 3: Thông báo hoàn tất
 │   │
 │   └── 📁 assets/                  # Tài nguyên (icon, hình ảnh)
@@ -72,8 +73,10 @@ FaceRecognitionSystem/
 - **enrollment/**: Module đăng ký theo wizard 3 bước
   - **enroll_ui.py**: Orchestrator cho 3 steps
   - **steps/profile_step.py**: Form nhập MSSV + Họ tên
-  - **steps/capture_step.py + capture_ui.py**: Chụp 5 góc (Frontal/Left/Right/Up/Down)
-  - **steps/face_processing_thread.py**: QThread xử lý AI không block UI
+  - **steps/capture_step/**: Module chụp 5 góc (Frontal/Left/Right/Up/Down)
+    - **capture_step.py**: UI logic chính
+    - **capture_ui.py**: UI components riêng
+    - **face_processing_thread.py**: QThread xử lý AI không block UI
   - **steps/success_step.py**: Màn hình xác nhận thành công
 
 ### 3. Business Logic (`modules/`)
