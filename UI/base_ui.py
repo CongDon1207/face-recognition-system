@@ -104,12 +104,11 @@ class BaseWindow(QMainWindow):
         self.pages.setCurrentIndex(idx)
         self.page_title.setText(text)
         
-        # Nếu chuyển sang Authentication view (idx=1), khởi động camera
-        if idx == 1 and hasattr(self, 'auth_view'):
-            self.auth_view.start_authentication()
-        # Nếu chuyển đi khỏi Authentication, dừng camera sau 100ms
-        elif hasattr(self, 'auth_view') and self.auth_view.camera_thread:
-            # Dùng QTimer để đảm bảo stop sau khi frame processing xong
+        # Nếu chuyển sang Authentication view (idx=1), KHÔNG tự động bật nữa
+        if idx == 1:
+            pass 
+        # Nếu chuyển đi khỏi Authentication, dừng camera
+        elif hasattr(self, 'auth_view') and (self.auth_view.camera_thread or self.auth_view.is_checking):
             QTimer.singleShot(100, self.auth_view.stop_authentication)
         
     def create_placeholder_page(self, text):

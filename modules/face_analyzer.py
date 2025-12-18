@@ -63,7 +63,7 @@ def _get_face_mesh():
 class FaceAnalyzer:
     """Phân tích khuôn mặt: detect, pose, embedding."""
 
-    def __init__(self, use_gpu: bool = False, model_name: str = "buffalo_s"):
+    def __init__(self, use_gpu: bool = True, model_name: str = "buffalo_s"):
         self.face_mesh = None
         self.insightface = None
         self._last_face_box = None
