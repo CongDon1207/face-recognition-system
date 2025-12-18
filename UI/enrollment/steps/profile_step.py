@@ -66,11 +66,34 @@ class ProfileStep(QWidget):
         dob_label = QLabel("Ngày sinh:")
         dob_label.setStyleSheet(f"color: {Theme.TEXT_WHITE}; font-size: 14px;")
         modal_layout.addWidget(dob_label)
-        
+
+        # Ô chọn ngày sinh dạng box với popup calendar
         self.dob_input = QDateEdit()
         self.dob_input.setCalendarPopup(True)
         self.dob_input.setDate(QDate(2000, 1, 1))
         self.dob_input.setDisplayFormat("dd/MM/yyyy")
+        self.dob_input.setStyleSheet(f"""
+            QDateEdit {{
+                background-color: rgba(0, 0, 0, 50);
+                border: 1px solid {Theme.BORDER_COLOR};
+                border-radius: 6px;
+                color: {Theme.TEXT_WHITE};
+                font-size: 14px;
+                padding: 10px;
+            }}
+            QDateEdit::drop-down {{
+                subcontrol-origin: padding;
+                subcontrol-position: right center;
+                width: 20px;
+                border: none;
+                image: none;
+            }}
+            QDateEdit::down-arrow {{
+                image: none;
+                width: 0;
+                height: 0;
+            }}
+        """)
         modal_layout.addWidget(self.dob_input)
         
         # Next Button
@@ -103,3 +126,6 @@ class ProfileStep(QWidget):
     def clear_fields(self):
         self.name_input.clear()
         self.id_input.clear()
+        self.email_input.clear()
+        self.phone_input.clear()
+        self.dob_input.setDate(QDate(2000, 1, 1))
