@@ -8,57 +8,50 @@ FaceRecognitionSystem/
 ├── 📄 requirements.txt             # Danh sách dependencies
 ├── 📄 README.md                    # Tài liệu tổng quan dự án
 ├── 📄 CHANGELOG.md                 # Lịch sử thay đổi
-├── 📄 HANDOFF.md                   # Trạng thái hiện tại & TODO
 ├── 📄 AGENTS.md                    # Quy tắc code cho AI agents
 │
 ├── 📁 UI/                          # Giao diện người dùng (PySide6)
-│   ├── __init__.py
-│   ├── base_ui.py                  # MainWindow - cửa sổ chính
+│   ├── base_ui.py                  # MainWindow - cửa sổ chính (quản lý auth state)
 │   ├── styles.py                   # Theme Neon Glassmorphism
-│   │
 │   ├── 📁 components/              # UI components tái sử dụng
-│   │   └── sidebar.py              # Thanh điều hướng bên trái
-│   │
+│   │   └── sidebar.py              # Navigation sidebar (2 mode: guest/authenticated)
+│   ├── 📁 authentication/          # Module xác thực khuôn mặt
+│   │   ├── auth_ui.py              # Giao diện Authentication
+│   │   └── success_view.py         # (Legacy - không dùng nữa)
 │   ├── 📁 enrollment/              # Module đăng ký khuôn mặt
 │   │   ├── enroll_ui.py            # Manager 3-step wizard
 │   │   └── 📁 steps/
-│   │       ├── profile_step.py     # Bước 1: Nhập thông tin (MSSV, Tên)
-│   │       ├── 📁 capture_step/    # Bước 2: Module chụp 5 góc
-│   │       │   ├── capture_step.py           # UI logic chính
-│   │       │   ├── capture_ui.py             # UI components riêng
-│   │       │   └── face_processing_thread.py # AI thread xử lý pose/distance
-│   │       └── success_step.py     # Bước 3: Thông báo hoàn tất
-│   │
+│   │       ├── profile_step.py
+│   │       ├── 📁 capture_step/
+│   │       │   ├── capture_step.py
+│   │       │   └── capture_ui.py
+│   │       └── success_step.py
+│   ├── 📁 dashboard/               # Dashboard (sau khi auth thành công)
+│   │   └── dashboard_ui.py         # Stats cards + Logs table + Chart placeholder
+│   ├── 📁 profile/                 # Trang Profile người dùng
+│   │   └── profile_ui.py           # Hiển thị thông tin user đang đăng nhập
+│   ├── 📁 about/                   # Trang About
+│   │   └── about_ui.py             # Thông tin ứng dụng
 │   └── 📁 assets/                  # Tài nguyên (icon, hình ảnh)
+│       ├── 📁 icons/
+│       └── 📁 images/
 │
-├── 📁 modules/                     # Business logic & AI
-│   ├── database.py                 # DatabaseManager - SQLite (users, embeddings)
-│   ├── face_analyzer.py            # FaceAnalyzer - detect, distance, pose, embedding
-│   └── pose_logic.py               # Geometric ratio logic cho head pose
+├── 📁 modules/                     # Business logic
+│   ├── 📁 ai/                      # Lớp AI Processing
+│   │   ├── face_analyzer.py    # FaceAnalyzer core
+│   │   └── pose_logic.py       # Thuật toán head pose
+│   ├── database.py                 # SQLite Manager (users, embeddings, events)
+│   └── authenticator.py            # Logic so khớp khuôn mặt
 │
-├── 📁 common/                      # Utilities dùng chung
-│   └── camera.py                   # CameraThread - đọc webcam qua QThread
+├── 📁 common/                      # Tiện ích dùng chung
+│   ├── camera.py                   # Đọc webcam
+│   └── 📁 workers/                 # Các Worker Thread chạy ngầm (Qt)
+│       ├── auth_worker.py      # Worker cho Authentication
+│       └── enroll_worker.py    # Worker cho Enrollment (đổi tên từ face_processing_thread)
 │
 ├── 📁 data/                        # Dữ liệu runtime
-│   ├── faces.db                    # SQLite database
-│   ├── 📁 faces/                   # Thư mục lưu ảnh enroll (theo user_id)
-│   │   ├── 1/
-│   │   ├── 3/
-│   │   └── ...
-│   └── 📁 models/                  # Pretrained models (InsightFace)
-│       ├── 📁 buffalo_s/           # Model nhẹ (default)
-│       └── 📁 buffalo_l/           # Model lớn (optional)
-│
 ├── 📁 docs/                        # Tài liệu dự án
-│   ├── STRUCTURE.md                # File này
-│   ├── ALGORITHM_POSE.md           # Giải thích thuật toán head pose
-│   ├── implementation_plan.md      # Kế hoạch triển khai
-│   ├── Proposal.md                 # Đề xuất đồ án
-│   └── 📁 guide/
-│       ├── RUN.md                  # Hướng dẫn chạy ứng dụng
-│       └── SETUP.md                # Hướng dẫn cài đặt môi trường
-│
-└── 📁 venv/                        # Môi trường ảo Python (git ignored)
+└── 📁 venv/                        # Môi trường ảo (git ignored)
 ```
 
 ## 🎯 Mô tả chi tiết
@@ -95,13 +88,19 @@ FaceRecognitionSystem/
 - **camera.py**: `CameraThread` - QThread emit `frame_captured(np.ndarray)` mỗi frame
 
 ### 5. Data (`data/`)
-- **faces.db**: SQLite với 2 bảng:
-  - `users(id, name, student_id, created_at)`
-  - `face_embeddings(id, user_id, embedding_blob, pose_type, created_at)`
+- **faces.db**: SQLite với 3 bảng:
+  - `users(id, fullname, email, phone, dob, avatar_path, created_at)`
+  - `face_embeddings(id, user_id, embedding_blob, pose_type, image_path, created_at)`
+  - `events(id, event_type, user_id, result, score, details, created_at)` - logs cho Dashboard
 - **faces/**: Lưu ảnh raw theo `user_id/pose_type.jpg` (optional, chủ yếu dùng embedding)
 - **models/**: InsightFace pretrained models (buffalo_s/buffalo_l)
 
-### 6. Documentation (`docs/`)
+### 6. Navigation Flow
+- **Guest Mode** (chưa xác thực): Chỉ hiển thị Authentication + Enrollment
+- **Authenticated Mode** (sau khi auth thành công): Dashboard + Profile + About + Logout
+- Logout sẽ reset về Guest Mode
+
+### 7. Documentation (`docs/`)
 - Guides, algorithms, proposals, và file cấu trúc này
 
 

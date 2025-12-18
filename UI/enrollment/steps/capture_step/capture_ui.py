@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from UI.styles import Theme
-from modules.face_analyzer import DistanceStatus, PoseType
+from modules.ai.face_analyzer import DistanceStatus, PoseType
 
 
 class CaptureStepUI:
