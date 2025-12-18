@@ -1,10 +1,11 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, 
                                QPushButton, QLabel, QStackedWidget, QFrame)
-from PySide6.QtCore import Qt, QSize
+from PySide6.QtCore import Qt, QSize, QTimer
 from PySide6.QtGui import QIcon
 from UI.styles import Theme
 from UI.enrollment.enroll_ui import EnrollmentView
 from UI.authentication.auth_ui import AuthenticationView
+from UI.authentication.success_view import SuccessView
 from UI.components.sidebar import Sidebar
 
 class BaseWindow(QMainWindow):
@@ -46,6 +47,7 @@ class BaseWindow(QMainWindow):
         
         # 1: Authentication (Real UI)
         self.auth_view = AuthenticationView()
+        self.auth_view.authentication_success.connect(self.on_authentication_success)
         self.pages.addWidget(self.auth_view)
         
         # 2: Enrollment (Real UI)
@@ -55,6 +57,11 @@ class BaseWindow(QMainWindow):
         
         # 3: Settings
         self.pages.addWidget(self.create_placeholder_page("Settings View"))
+        
+        # 4: Success View (hiển thị sau authentication thành công)
+        self.success_view = SuccessView()
+        self.success_view.back_to_auth.connect(self.back_to_authentication)
+        self.pages.addWidget(self.success_view)
         
         content_layout.addWidget(self.pages)
         
@@ -67,6 +74,26 @@ class BaseWindow(QMainWindow):
         self.page_title.setText("Authentication")
         # Start authentication when switching to this view
         self.auth_view.start_authentication()
+    
+    def on_authentication_success(self, user_id: str, fullname: str):
+        """Xử lý khi authentication thành công - chuyển sang Success View"""
+        print(f"Authentication success: {fullname} ({user_id})")
+        
+        # Dừng camera
+        self.auth_view.stop_authentication()
+        
+        # Hiển thị success view
+        self.success_view.show_success(user_id, fullname)
+        self.pages.setCurrentIndex(4)  # Index 4 là SuccessView
+        self.page_title.setText("Access Granted")
+    
+    def back_to_authentication(self):
+        """Quay lại authentication view"""
+        self.sidebar.set_active_index(1)
+        self.pages.setCurrentIndex(1)
+        self.page_title.setText("Authentication")
+        # Restart authentication
+        QTimer.singleShot(100, self.auth_view.start_authentication)
 
     def setup_sidebar(self):
         self.sidebar = Sidebar()
@@ -76,6 +103,14 @@ class BaseWindow(QMainWindow):
     def on_nav_clicked(self, idx, text):
         self.pages.setCurrentIndex(idx)
         self.page_title.setText(text)
+        
+        # Nếu chuyển sang Authentication view (idx=1), khởi động camera
+        if idx == 1 and hasattr(self, 'auth_view'):
+            self.auth_view.start_authentication()
+        # Nếu chuyển đi khỏi Authentication, dừng camera sau 100ms
+        elif hasattr(self, 'auth_view') and self.auth_view.camera_thread:
+            # Dùng QTimer để đảm bảo stop sau khi frame processing xong
+            QTimer.singleShot(100, self.auth_view.stop_authentication)
         
     def create_placeholder_page(self, text):
         page = QFrame()
@@ -96,3 +131,10 @@ class BaseWindow(QMainWindow):
         label.setStyleSheet(f"color: {Theme.PRIMARY}; font-size: 18px;")
         layout.addWidget(label)
         return page
+    
+    def closeEvent(self, event):
+        """Cleanup khi đóng cửa sổ."""
+        # Dừng authentication để cleanup camera thread
+        if hasattr(self, 'auth_view') and self.auth_view:
+            self.auth_view.stop_authentication()
+        event.accept()

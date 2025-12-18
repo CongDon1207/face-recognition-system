@@ -35,6 +35,7 @@ FaceRecognitionSystem/
 ├── 📁 modules/                     # Business logic & AI
 │   ├── database.py                 # DatabaseManager - SQLite (users, embeddings)
 │   ├── face_analyzer.py            # FaceAnalyzer - detect, distance, pose, embedding
+│   ├── authenticator.py            # Authenticator - So khớp embedding, xác thực user
 │   └── pose_logic.py               # Geometric ratio logic cho head pose
 │
 ├── 📁 common/                      # Utilities dùng chung
