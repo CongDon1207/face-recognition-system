@@ -40,6 +40,9 @@ class DatabaseManager:
                 CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,
                     fullname TEXT NOT NULL,
+                    email TEXT,
+                    phone TEXT,
+                    dob TEXT,
                     avatar_path TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -58,19 +61,19 @@ class DatabaseManager:
             """)
             conn.commit()
 
-    def add_user(self, user_id: str, fullname: str, avatar_path: str = None) -> bool:
+    def add_user(self, user_id: str, fullname: str, email: str = None, 
+                 phone: str = None, dob: str = None, avatar_path: str = None) -> bool:
         """Thêm người dùng mới vào database."""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO users (id, fullname, avatar_path) VALUES (?, ?, ?)",
-                    (user_id, fullname, avatar_path)
+                    "INSERT INTO users (id, fullname, email, phone, dob, avatar_path) VALUES (?, ?, ?, ?, ?, ?)",
+                    (user_id, fullname, email, phone, dob, avatar_path)
                 )
                 conn.commit()
             return True
         except sqlite3.IntegrityError:
-            # User ID đã tồn tại
             return False
 
     def add_embedding(self, user_id: str, embedding: np.ndarray, 
@@ -92,10 +95,18 @@ class DatabaseManager:
         """Lấy thông tin người dùng theo ID."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, fullname, avatar_path, created_at FROM users WHERE id = ?", (user_id,))
+            cursor.execute("SELECT id, fullname, email, phone, dob, avatar_path, created_at FROM users WHERE id = ?", (user_id,))
             row = cursor.fetchone()
             if row:
-                return {"id": row[0], "fullname": row[1], "avatar_path": row[2], "created_at": row[3]}
+                return {
+                    "id": row[0], 
+                    "fullname": row[1], 
+                    "email": row[2], 
+                    "phone": row[3], 
+                    "dob": row[4], 
+                    "avatar_path": row[5], 
+                    "created_at": row[6]
+                }
         return None
 
     def get_all_embeddings(self) -> list[tuple[str, np.ndarray]]:
@@ -139,6 +150,9 @@ class DatabaseManager:
         self,
         user_id: str,
         fullname: str,
+        email: str | None,
+        phone: str | None,
+        dob: str | None,
         avatar_path: str | None,
         embeddings_data: list[tuple[np.ndarray, str, str | None]],
     ) -> bool:
@@ -146,15 +160,13 @@ class DatabaseManager:
         Ghi enrollment theo 1 transaction:
         - Thêm user trước
         - Thêm embeddings sau
-        Nếu bất kỳ bước nào fail -> rollback, tránh embeddings mồ côi.
-        embeddings_data: [(embedding, pose_type, image_path), ...]
         """
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO users (id, fullname, avatar_path) VALUES (?, ?, ?)",
-                    (user_id, fullname, avatar_path),
+                    "INSERT INTO users (id, fullname, email, phone, dob, avatar_path) VALUES (?, ?, ?, ?, ?, ?)",
+                    (user_id, fullname, email, phone, dob, avatar_path),
                 )
                 for embedding, pose_type, image_path in embeddings_data:
                     cursor.execute(
@@ -167,5 +179,6 @@ class DatabaseManager:
             return True
         except sqlite3.IntegrityError:
             return False
-        except sqlite3.Error:
+        except sqlite3.Error as e:
+            print(f"DB Error: {e}")
             return False

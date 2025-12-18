@@ -73,16 +73,21 @@ class SuccessView(QWidget):
         """)
         frame_layout.addWidget(self.welcome_label)
         
-        # User info
-        self.info_label = QLabel("")
-        self.info_label.setAlignment(Qt.AlignCenter)
-        self.info_label.setWordWrap(True)
-        self.info_label.setStyleSheet(f"""
-            color: {Theme.TEXT_GRAY};
-            font-size: 16px;
-            letter-spacing: 0.5px;
-        """)
-        frame_layout.addWidget(self.info_label)
+        # User info Container
+        self.info_container = QFrame()
+        self.info_container.setProperty("class", "glass_panel")
+        self.info_container.setMinimumHeight(150)
+        self.info_grid = QVBoxLayout(self.info_container)
+        self.info_grid.setSpacing(10)
+        
+        self.info_labels = {}
+        for key in ["ID", "Email", "SĐT", "Ngày sinh"]:
+            lbl = QLabel(f"{key}: -")
+            lbl.setStyleSheet(f"color: {Theme.TEXT_WHITE}; font-size: 16px;")
+            self.info_grid.addWidget(lbl)
+            self.info_labels[key] = lbl
+            
+        frame_layout.addWidget(self.info_container)
         
         # Access granted message
         access_label = QLabel("Access Granted")
@@ -92,10 +97,10 @@ class SuccessView(QWidget):
             font-size: 18px;
             font-weight: bold;
             letter-spacing: 2px;
+            margin-top: 10px;
         """)
         frame_layout.addWidget(access_label)
         
-        # Spacer
         frame_layout.addStretch()
         
         # Button quay lại
@@ -124,16 +129,15 @@ class SuccessView(QWidget):
         
         layout.addWidget(main_frame, alignment=Qt.AlignCenter)
     
-    def show_success(self, user_id: str, fullname: str):
-        """
-        Hiển thị thông tin user thành công
+    def show_success(self, user_data: dict):
+        """Hiển thị thông tin user thành công"""
+        fullname = user_data.get("fullname", "Unknown")
+        self.welcome_label.setText(f"Chào mừng, {fullname}!")
         
-        Args:
-            user_id: ID của user
-            fullname: Tên đầy đủ
-        """
-        self.welcome_label.setText(f"Welcome, {fullname}!")
-        self.info_label.setText(f"User ID: {user_id}\nAuthentication time: {self._get_current_time()}")
+        self.info_labels["ID"].setText(f"ID: {user_data.get('id', 'N/A')}")
+        self.info_labels["Email"].setText(f"Email: {user_data.get('email', 'N/A')}")
+        self.info_labels["SĐT"].setText(f"SĐT: {user_data.get('phone', 'N/A')}")
+        self.info_labels["Ngày sinh"].setText(f"Ngày sinh: {user_data.get('dob', 'N/A')}")
     
     def _get_current_time(self) -> str:
         """Lấy thời gian hiện tại"""

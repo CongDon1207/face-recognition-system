@@ -12,8 +12,8 @@ RATIO_THRESHOLDS = {
     "frontal": {"h_min": 0.5, "h_max": 2.0, "v_min": 0.25, "v_max": 0.65},
     "left": {"h_min": 2.8, "v_lax_min": 0.15, "v_lax_max": 0.8},
     "right": {"h_max": 0.35, "v_lax_min": 0.15, "v_lax_max": 0.8},
-    "up": {"v_max": 0.25},
-    "down": {"v_min": 0.65},
+    "up": {"v_max": 0.35},
+    "down": {"v_min": 0.85},
 }
 
 

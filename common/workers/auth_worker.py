@@ -1,6 +1,6 @@
 from PySide6.QtCore import QThread, Signal
 import numpy as np
-from modules.face_analyzer import FaceAnalyzer, PoseType
+from modules.ai.face_analyzer import FaceAnalyzer, PoseType
 from modules.authenticator import Authenticator
 
 class AuthWorker(QThread):

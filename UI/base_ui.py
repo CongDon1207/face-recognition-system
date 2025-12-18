@@ -25,6 +25,8 @@ class BaseWindow(QMainWindow):
         self.setStyleSheet(Theme.get_stylesheet())
         
         # Initialize UI Components
+        from modules.database import DatabaseManager
+        self.db = DatabaseManager()
         self.setup_sidebar()
         self.setup_content_area()
 
@@ -77,15 +79,23 @@ class BaseWindow(QMainWindow):
     
     def on_authentication_success(self, user_id: str, fullname: str):
         """Xử lý khi authentication thành công - chuyển sang Success View"""
-        print(f"Authentication success: {fullname} ({user_id})")
+        # Lấy đầy đủ thông tin từ DB
+        user_data = self.db.get_user(user_id)
+        print(f"DEBUG: user_data for {user_id}: {user_data}")
+        print(f"DEBUG: user_data from DB for {user_id}: {user_data}")
         
         # Dừng camera
         self.auth_view.stop_authentication()
         
         # Hiển thị success view
-        self.success_view.show_success(user_id, fullname)
+        if user_data:
+            self.success_view.show_success(user_data)
+        else:
+            # Fallback nếu không tìm thấy profile chi tiết
+            self.success_view.show_success({"id": user_id, "fullname": fullname})
+            
         self.pages.setCurrentIndex(4)  # Index 4 là SuccessView
-        self.page_title.setText("Access Granted")
+        self.page_title.setText("Quyền truy cập được chấp nhận")
     
     def back_to_authentication(self):
         """Quay lại authentication view"""

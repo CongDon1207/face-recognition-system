@@ -9,7 +9,7 @@ from UI.enrollment.steps.profile_step import ProfileStep
 from UI.enrollment.steps.capture_step import CaptureStep
 from UI.enrollment.steps.success_step import SuccessStep
 from modules.database import DatabaseManager
-from modules.face_analyzer import PoseType
+from modules.ai.face_analyzer import PoseType
 
 
 class EnrollmentView(QWidget):
@@ -44,18 +44,18 @@ class EnrollmentView(QWidget):
         # Start at Step 1
         self.wizard_layout.setCurrentIndex(0)
 
-    def on_profile_complete(self, name: str, emp_id: str):
+    def on_profile_complete(self, user_data: dict):
         """Xử lý khi nhập xong thông tin profile."""
-        self.user_profile = {"fullname": name, "id": emp_id}
+        self.user_profile = user_data
+        emp_id = user_data["id"]
 
         # Kiểm tra user đã tồn tại chưa
         if self.db.user_exists(emp_id):
-            # TODO: Hiển thị thông báo lỗi trên UI
             print(f"[Enrollment] User ID {emp_id} đã tồn tại!")
             return
 
         # Pass to Step 3 for display later
-        self.step3.set_data(name, emp_id)
+        self.step3.set_data(user_data["fullname"], emp_id)
 
         # Move to Step 2
         self.wizard_layout.setCurrentIndex(1)
@@ -70,6 +70,9 @@ class EnrollmentView(QWidget):
 
         user_id = self.user_profile["id"]
         fullname = self.user_profile["fullname"]
+        email = self.user_profile.get("email")
+        phone = self.user_profile.get("phone")
+        dob = self.user_profile.get("dob")
 
         # Lưu ảnh trước, gom dữ liệu embedding để ghi DB theo transaction
         avatar_path = None
@@ -83,6 +86,9 @@ class EnrollmentView(QWidget):
         success = self.db.enroll_user_with_embeddings(
             user_id=user_id,
             fullname=fullname,
+            email=email,
+            phone=phone,
+            dob=dob,
             avatar_path=avatar_path,
             embeddings_data=embeddings_data,
         )

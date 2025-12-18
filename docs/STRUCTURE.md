@@ -8,59 +8,42 @@ FaceRecognitionSystem/
 ├── 📄 requirements.txt             # Danh sách dependencies
 ├── 📄 README.md                    # Tài liệu tổng quan dự án
 ├── 📄 CHANGELOG.md                 # Lịch sử thay đổi
-├── 📄 HANDOFF.md                   # Trạng thái hiện tại & TODO
 ├── 📄 AGENTS.md                    # Quy tắc code cho AI agents
 │
 ├── 📁 UI/                          # Giao diện người dùng (PySide6)
-│   ├── __init__.py
 │   ├── base_ui.py                  # MainWindow - cửa sổ chính
 │   ├── styles.py                   # Theme Neon Glassmorphism
-│   │
 │   ├── 📁 components/              # UI components tái sử dụng
-│   │   └── sidebar.py              # Thanh điều hướng bên trái
-│   ├── authentication/         # Module xác thực khuôn mặt
-│   │   └── auth_ui.py          # Giao diện Authentication (Camera + Liveness)
+│   ├── 📁 authentication/          # Module xác thực khuôn mặt
+│   │   └── auth_ui.py          # Giao diện Authentication (Mượt 30 FPS với Worker)
 │   ├── 📁 enrollment/              # Module đăng ký khuôn mặt
 │   │   ├── enroll_ui.py            # Manager 3-step wizard
 │   │   └── 📁 steps/
-│   │       ├── profile_step.py     # Bước 1: Nhập thông tin (MSSV, Tên)
-│   │       ├── 📁 capture_step/    # Bước 2: Module chụp 5 góc
-│   │       │   ├── capture_step.py           # UI logic chính
-│   │       │   ├── capture_ui.py             # UI components riêng
-│   │       │   └── face_processing_thread.py # AI thread xử lý pose/distance
-│   │       └── success_step.py     # Bước 3: Thông báo hoàn tất
-│   │
+│   │       ├── profile_step.py
+│   │       ├── 📁 capture_step/
+│   │       │   ├── capture_step.py
+│   │       │   └── capture_ui.py
+│   │       └── success_step.py
 │   └── 📁 assets/                  # Tài nguyên (icon, hình ảnh)
+│       ├── 📁 icons/
+│       └── 📁 images/
 │
-├── 📁 modules/                     # Business logic & AI
-│   ├── database.py                 # DatabaseManager - SQLite (users, embeddings)
-│   ├── face_analyzer.py            # FaceAnalyzer - detect, distance, pose, embedding
-│   ├── authenticator.py            # Authenticator - So khớp embedding, xác thực user
-│   └── pose_logic.py               # Geometric ratio logic cho head pose
+├── 📁 modules/                     # Business logic
+│   ├── 📁 ai/                      # Lớp AI Processing
+│   │   ├── face_analyzer.py    # FaceAnalyzer core
+│   │   └── pose_logic.py       # Thuật toán head pose
+│   ├── database.py                 # SQLite Manager
+│   └── authenticator.py            # Logic so khớp khuôn mặt
 │
-├── 📁 common/                      # Utilities dùng chung
-│   └── camera.py                   # CameraThread - đọc webcam qua QThread
+├── 📁 common/                      # Tiện ích dùng chung
+│   ├── camera.py                   # Đọc webcam
+│   └── 📁 workers/                 # Các Worker Thread chạy ngầm (Qt)
+│       ├── auth_worker.py      # Worker cho Authentication
+│       └── enroll_worker.py    # Worker cho Enrollment (đổi tên từ face_processing_thread)
 │
 ├── 📁 data/                        # Dữ liệu runtime
-│   ├── faces.db                    # SQLite database
-│   ├── 📁 faces/                   # Thư mục lưu ảnh enroll (theo user_id)
-│   │   ├── 1/
-│   │   ├── 3/
-│   │   └── ...
-│   └── 📁 models/                  # Pretrained models (InsightFace)
-│       ├── 📁 buffalo_s/           # Model nhẹ (default)
-│       └── 📁 buffalo_l/           # Model lớn (optional)
-│
 ├── 📁 docs/                        # Tài liệu dự án
-│   ├── STRUCTURE.md                # File này
-│   ├── ALGORITHM_POSE.md           # Giải thích thuật toán head pose
-│   ├── implementation_plan.md      # Kế hoạch triển khai
-│   ├── Proposal.md                 # Đề xuất đồ án
-│   └── 📁 guide/
-│       ├── RUN.md                  # Hướng dẫn chạy ứng dụng
-│       └── SETUP.md                # Hướng dẫn cài đặt môi trường
-│
-└── 📁 venv/                        # Môi trường ảo Python (git ignored)
+└── 📁 venv/                        # Môi trường ảo (git ignored)
 ```
 
 ## 🎯 Mô tả chi tiết

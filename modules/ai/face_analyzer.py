@@ -8,7 +8,7 @@ from enum import Enum
 
 import numpy as np
 
-from modules.pose_logic import check_pose_logic
+from modules.ai.pose_logic import check_pose_logic
 
 _mp_face_mesh = None
 _insightface_app = None
@@ -41,6 +41,10 @@ FACE_AREA_MAX_RATIO = 0.55
 # Siết khoảng cách tối thiểu riêng cho từng pose (FRONTAL cần gần hơn)
 FACE_AREA_MIN_RATIO_BY_POSE = {
     PoseType.FRONTAL: 0.3,
+    PoseType.LEFT: 0.2,
+    PoseType.RIGHT: 0.2,
+    PoseType.UP: 0.2,
+    PoseType.DOWN: 0.2,
 }
 
 

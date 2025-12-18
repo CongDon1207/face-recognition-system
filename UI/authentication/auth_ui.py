@@ -8,9 +8,9 @@ import numpy as np
 import time
 
 from common.camera import CameraThread
-from modules.face_analyzer import FaceAnalyzer, PoseType, DistanceStatus
+from modules.ai.face_analyzer import FaceAnalyzer, PoseType, DistanceStatus
 from modules.authenticator import Authenticator
-from UI.authentication.auth_worker import AuthWorker
+from common.workers.auth_worker import AuthWorker
 
 class AuthenticationView(QWidget):
     """

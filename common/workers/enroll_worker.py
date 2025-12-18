@@ -5,7 +5,7 @@ Tách riêng để đơn giản hóa UI và giữ file ngắn hơn.
 
 from PySide6.QtCore import QThread, QMutex, QWaitCondition, Signal
 
-from modules.face_analyzer import FaceAnalyzer, DistanceStatus, PoseType
+from modules.ai.face_analyzer import FaceAnalyzer, DistanceStatus, PoseType
 
 
 class FaceProcessingThread(QThread):
