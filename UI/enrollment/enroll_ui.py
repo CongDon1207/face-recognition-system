@@ -98,6 +98,15 @@ class EnrollmentView(QWidget):
             self.reset_wizard()
             return
 
+        # Ghi event vào logs
+        self.db.add_event(
+            event_type="enroll",
+            user_id=user_id,
+            result="success",
+            details=f"Đăng ký thành công: {fullname}"
+        )
+        print(f"[Enrollment] Đăng ký thành công: {user_id} - {fullname}")
+
         # Move to Step 3
         self.wizard_layout.setCurrentIndex(2)
 

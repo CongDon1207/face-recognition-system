@@ -59,6 +59,18 @@ class DatabaseManager:
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             """)
+            # Bảng events - lưu logs cho Dashboard
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_type TEXT NOT NULL,
+                    user_id TEXT,
+                    result TEXT NOT NULL,
+                    score REAL,
+                    details TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
             conn.commit()
 
     def add_user(self, user_id: str, fullname: str, email: str = None, 
@@ -182,3 +194,108 @@ class DatabaseManager:
         except sqlite3.Error as e:
             print(f"DB Error: {e}")
             return False
+
+    # ========== Events (Logs) Methods ==========
+    
+    def add_event(self, event_type: str, user_id: str = None, result: str = "success", 
+                  score: float = None, details: str = None) -> int:
+        """
+        Ghi một event vào bảng logs.
+        event_type: 'enroll', 'auth', 'auth_fail', 'logout'
+        result: 'success', 'fail', 'cancelled'
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """INSERT INTO events (event_type, user_id, result, score, details)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (event_type, user_id, result, score, details)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_events(self, limit: int = 50, event_type: str = None) -> list[dict]:
+        """Lấy danh sách events gần nhất (cho Dashboard logs)."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            if event_type:
+                cursor.execute(
+                    """SELECT id, event_type, user_id, result, score, details, created_at 
+                       FROM events WHERE event_type = ? ORDER BY created_at DESC LIMIT ?""",
+                    (event_type, limit)
+                )
+            else:
+                cursor.execute(
+                    """SELECT id, event_type, user_id, result, score, details, created_at 
+                       FROM events ORDER BY created_at DESC LIMIT ?""",
+                    (limit,)
+                )
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": row[0],
+                    "event_type": row[1],
+                    "user_id": row[2],
+                    "result": row[3],
+                    "score": row[4],
+                    "details": row[5],
+                    "created_at": row[6]
+                }
+                for row in rows
+            ]
+
+    def get_stats(self) -> dict:
+        """Lấy thống kê tổng quan cho Dashboard."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Tổng số users
+            cursor.execute("SELECT COUNT(*) FROM users")
+            total_users = cursor.fetchone()[0]
+            
+            # Tổng số enroll events
+            cursor.execute("SELECT COUNT(*) FROM events WHERE event_type = 'enroll'")
+            total_enrolls = cursor.fetchone()[0]
+            
+            # Tổng số auth events (thành công)
+            cursor.execute("SELECT COUNT(*) FROM events WHERE event_type = 'auth' AND result = 'success'")
+            total_auth_success = cursor.fetchone()[0]
+            
+            # Tổng số auth events (thất bại)
+            cursor.execute("SELECT COUNT(*) FROM events WHERE event_type = 'auth_fail'")
+            total_auth_fail = cursor.fetchone()[0]
+            
+            # Auth hôm nay
+            cursor.execute("""
+                SELECT COUNT(*) FROM events 
+                WHERE event_type = 'auth' AND result = 'success'
+                AND date(created_at) = date('now')
+            """)
+            auth_today = cursor.fetchone()[0]
+            
+            return {
+                "total_users": total_users,
+                "total_enrolls": total_enrolls,
+                "total_auth_success": total_auth_success,
+                "total_auth_fail": total_auth_fail,
+                "auth_today": auth_today
+            }
+
+    def get_all_users(self) -> list[dict]:
+        """Lấy danh sách tất cả users."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, fullname, email, phone, dob, avatar_path, created_at FROM users ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": row[0],
+                    "fullname": row[1],
+                    "email": row[2],
+                    "phone": row[3],
+                    "dob": row[4],
+                    "avatar_path": row[5],
+                    "created_at": row[6]
+                }
+                for row in rows
+            ]
