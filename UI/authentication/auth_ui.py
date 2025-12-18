@@ -97,8 +97,14 @@ class AuthenticationView(QWidget):
         
         viewport_layout = QVBoxLayout(self.camera_viewport)
         self.camera_status = QLabel("Camera Offline")
-        self.camera_status.setStyleSheet("color: rgba(160, 160, 160, 60); font-size: 13px;")
         viewport_layout.addWidget(self.camera_status, alignment=Qt.AlignCenter)
+        
+        # Loading Overlay
+        self.loading_label = QLabel("Initializing System...", self.camera_viewport)
+        self.loading_label.setAlignment(Qt.AlignCenter)
+        self.loading_label.setStyleSheet(f"background-color: rgba(0,0,0,180); color: {Theme.PRIMARY}; font-size: 16px; font-weight: bold;")
+        self.loading_label.setFixedSize(400, 360)
+        self.loading_label.hide()
         
         # HUD
         self.hud_frame = QFrame(panel)
@@ -138,18 +144,35 @@ class AuthenticationView(QWidget):
     def start_authentication(self):
         if self.is_checking: return
         self.is_checking = True
-        self.camera_status.setText("Starting...")
+        self.camera_status.hide()
         
-        # Init Worker
+        # Hiển thị loading rõ ràng
+        self.loading_label.setText("⏳ Đang khởi tạo AI...\nVui lòng đợi")
+        self.loading_label.show()
+        self.loading_label.raise_()
+        
+        # Init Worker trước
         self.auth_worker = AuthWorker()
         self.auth_worker.result_ready.connect(self._on_ai_result)
         self.auth_worker.auth_result.connect(self._on_auth_result)
+        self.auth_worker.model_ready.connect(self._on_model_ready)
         self.auth_worker.start()
+    
+    def _on_model_ready(self):
+        """Callback khi AI model đã sẵn sàng - bắt đầu camera."""
+        self.loading_label.setText("⏳ Đang mở camera...")
         
-        # Init Camera
+        # Init Camera SAU khi model đã load
         self.camera_thread = CameraThread()
         self.camera_thread.frame_captured.connect(self._on_frame_captured)
+        self.camera_thread.error_occurred.connect(self._on_camera_error)
         self.camera_thread.start()
+    
+    def _on_camera_error(self, error_msg: str):
+        """Xử lý lỗi camera."""
+        self.loading_label.setText(f"❌ Lỗi: {error_msg}")
+        self.status_message.setText(error_msg)
+        self.status_message.setStyleSheet(f"color: {Theme.DANGER_RED}; font-size: 16px; font-weight: bold;")
 
     def stop_authentication(self):
         self.is_checking = False
@@ -166,12 +189,15 @@ class AuthenticationView(QWidget):
             self.camera_label.hide()
         self.status_message.setText("")
         self.liveness_label.setText("STATUS: READY")
+        self.loading_label.hide()
 
     def _on_frame_captured(self, frame: np.ndarray):
         t = time.time()
         if self.last_frame_time > 0:
             self.fps_value = 1.0 / (t - self.last_frame_time)
         self.last_frame_time = t
+        
+        self.loading_label.hide()
         
         self.fps_label.setText(f"FPS: {self.fps_value:.1f}")
         
