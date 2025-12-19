@@ -1,15 +1,14 @@
 """
-Dashboard View - Hiển thị thống kê và logs hệ thống
+Dashboard View - Hiển thị thống kê và logs hệ thống (WITH FAIL TRACKING)
 """
 from PySide6.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QLabel, QFrame, 
     QTableWidget, QTableWidgetItem, QHeaderView, QScrollArea
 )
-from PySide6.QtCore import Qt
+from PySide6.QtCore import Qt, Signal
 from PySide6.QtGui import QColor
 from UI.styles import Theme
 from modules.database import DatabaseManager
-
 
 class StatCard(QFrame):
     """Card hiển thị một thống kê"""
@@ -54,9 +53,17 @@ class StatCard(QFrame):
 class DashboardView(QWidget):
     """Dashboard chính - stats + logs + biểu đồ"""
     
+    # NEW: Signal để nhận cập nhật fail count real-time
+    fail_count_updated = Signal(int)
+    
     def __init__(self):
         super().__init__()
         self.db = DatabaseManager()
+        
+        # NEW: Tracking live fail count
+        self.current_fail_count = 0
+        self.session_fail_count = 0  # Fail trong phiên hiện tại
+        
         self.init_ui()
     
     def init_ui(self):
@@ -72,16 +79,46 @@ class DashboardView(QWidget):
         self.card_enrolls = StatCard("Đăng ký", "0", "📝", Theme.SECONDARY_GREEN)
         self.card_auth_success = StatCard("Xác thực OK", "0", "✅", Theme.SECONDARY_GREEN)
         self.card_auth_fail = StatCard("Xác thực Fail", "0", "❌", Theme.SECONDARY_RED)
+        
+        # NEW: Card riêng cho fail count của session hiện tại
+        self.card_session_fails = StatCard("Fails hiện tại", "0/3", "⚠️", "#FFD700")
+        
         self.card_today = StatCard("Hôm nay", "0", "📅", Theme.PRIMARY)
         
         stats_container.addWidget(self.card_users)
         stats_container.addWidget(self.card_enrolls)
         stats_container.addWidget(self.card_auth_success)
         stats_container.addWidget(self.card_auth_fail)
+        stats_container.addWidget(self.card_session_fails)  # NEW
         stats_container.addWidget(self.card_today)
         stats_container.addStretch()
         
         main_layout.addLayout(stats_container)
+        
+        # === NEW: Real-time Status Bar ===
+        status_bar = QFrame()
+        status_bar.setFixedHeight(50)
+        status_bar.setStyleSheet(f"""
+            QFrame {{
+                background-color: rgba(0, 243, 255, 8);
+                border: 1px solid {Theme.PRIMARY};
+                border-radius: 8px;
+            }}
+        """)
+        status_layout = QHBoxLayout(status_bar)
+        status_layout.setContentsMargins(20, 10, 20, 10)
+        
+        self.live_status_label = QLabel("🟢 Hệ thống sẵn sàng")
+        self.live_status_label.setStyleSheet(f"color: {Theme.SECONDARY_GREEN}; font-size: 14px; font-weight: bold;")
+        
+        self.live_fail_label = QLabel("Fails: 0/3")
+        self.live_fail_label.setStyleSheet(f"color: {Theme.TEXT_GRAY}; font-size: 14px;")
+        
+        status_layout.addWidget(self.live_status_label)
+        status_layout.addStretch()
+        status_layout.addWidget(self.live_fail_label)
+        
+        main_layout.addWidget(status_bar)
         
         # === Logs Table ===
         logs_frame = QFrame()
@@ -100,8 +137,10 @@ class DashboardView(QWidget):
         logs_layout.addWidget(logs_title)
         
         self.logs_table = QTableWidget()
-        self.logs_table.setColumnCount(5)
-        self.logs_table.setHorizontalHeaderLabels(["Thời gian", "Loại", "User ID", "Kết quả", "Chi tiết"])
+        self.logs_table.setColumnCount(6)  # NEW: Thêm 1 cột cho fail count
+        self.logs_table.setHorizontalHeaderLabels([
+            "Thời gian", "Loại", "User ID", "Kết quả", "Fails", "Chi tiết"
+        ])
         self.logs_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
         self.logs_table.setAlternatingRowColors(True)
         self.logs_table.setSelectionBehavior(QTableWidget.SelectRows)
@@ -154,6 +193,47 @@ class DashboardView(QWidget):
         
         main_layout.addWidget(chart_frame)
     
+    def update_live_fail_count(self, fail_count: int, max_fails: int = 3):
+        """
+        NEW: Cập nhật fail count real-time từ AuthenticationView
+        
+        Args:
+            fail_count: Số lần fail hiện tại
+            max_fails: Số lần fail tối đa (mặc định 3)
+        """
+        self.session_fail_count = fail_count
+        
+        # Cập nhật card
+        self.card_session_fails.set_value(f"{fail_count}/{max_fails}")
+        
+        # Cập nhật status bar
+        self.live_fail_label.setText(f"Fails: {fail_count}/{max_fails}")
+        
+        # Đổi màu dựa trên mức độ nguy hiểm
+        if fail_count == 0:
+            color = Theme.SECONDARY_GREEN
+            status_text = "🟢 Hệ thống sẵn sàng"
+        elif fail_count == 1:
+            color = "#FFD700"  # Yellow
+            status_text = "🟡 Cảnh báo: 1 lần thất bại"
+        elif fail_count == 2:
+            color = "#FFA500"  # Orange
+            status_text = "🟠 Nguy hiểm: 2 lần thất bại"
+        else:
+            color = Theme.SECONDARY_RED
+            status_text = "🔴 Khóa: Quá nhiều lần thất bại"
+        
+        self.live_fail_label.setStyleSheet(f"color: {color}; font-size: 14px; font-weight: bold;")
+        self.live_status_label.setText(status_text)
+        self.live_status_label.setStyleSheet(f"color: {color}; font-size: 14px; font-weight: bold;")
+        
+        # Emit signal
+        self.fail_count_updated.emit(fail_count)
+    
+    def reset_session_fails(self):
+        """NEW: Reset fail count khi bắt đầu phiên mới"""
+        self.update_live_fail_count(0)
+    
     def refresh_data(self):
         """Load lại dữ liệu từ DB"""
         # Load stats
@@ -169,8 +249,10 @@ class DashboardView(QWidget):
         self.logs_table.setRowCount(len(events))
         
         for row, event in enumerate(events):
+            # Thời gian
             self.logs_table.setItem(row, 0, QTableWidgetItem(str(event["created_at"] or "")))
             
+            # Loại
             event_type = event["event_type"]
             type_item = QTableWidgetItem(event_type)
             if event_type == "auth":
@@ -181,8 +263,10 @@ class DashboardView(QWidget):
                 type_item.setForeground(QColor(Theme.PRIMARY))
             self.logs_table.setItem(row, 1, type_item)
             
+            # User ID
             self.logs_table.setItem(row, 2, QTableWidgetItem(event["user_id"] or "-"))
             
+            # Kết quả
             result = event["result"]
             result_item = QTableWidgetItem(result)
             if result == "success":
@@ -191,7 +275,25 @@ class DashboardView(QWidget):
                 result_item.setForeground(QColor(Theme.SECONDARY_RED))
             self.logs_table.setItem(row, 3, result_item)
             
-            self.logs_table.setItem(row, 4, QTableWidgetItem(event["details"] or "-"))
+            # NEW: Fail count (extract từ details nếu có)
+            details = event["details"] or ""
+            fail_count = "-"
+            if "fail_count:" in details.lower():
+                # Parse fail_count từ details string
+                try:
+                    fail_part = [p for p in details.split(",") if "fail_count" in p.lower()]
+                    if fail_part:
+                        fail_count = fail_part[0].split(":")[-1].strip()
+                except:
+                    pass
+            
+            fail_item = QTableWidgetItem(fail_count)
+            if fail_count != "-" and int(fail_count.split("/")[0]) >= 2:
+                fail_item.setForeground(QColor(Theme.SECONDARY_RED))
+            self.logs_table.setItem(row, 4, fail_item)
+            
+            # Chi tiết
+            self.logs_table.setItem(row, 5, QTableWidgetItem(details))
     
     def showEvent(self, event):
         """Refresh data khi view được hiển thị"""

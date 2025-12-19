@@ -5,9 +5,7 @@ Pose-logic đã được tách sang modules/pose_logic.py.
 
 import os
 from enum import Enum
-
 import numpy as np
-
 from modules.ai.pose_logic import check_pose_logic
 
 _mp_face_mesh = None
@@ -146,7 +144,7 @@ class FaceAnalyzer:
                 instruction = "Lại gần hơn!"
             elif dist_status == DistanceStatus.TOO_CLOSE:
                 instruction = "Lùi xa hơn!"
-
+        
         return {
             "has_face": True,
             "distance_status": dist_status,
@@ -155,7 +153,7 @@ class FaceAnalyzer:
             "pose_instruction": instruction,
             "yaw": yaw,
             "embedding": embedding,
-            "face_crop": None,
+            "face_crop": None
         }
 
     def _check_pose_logic(self, frame: np.ndarray, target_pose: PoseType) -> tuple[bool, str, float | None]:

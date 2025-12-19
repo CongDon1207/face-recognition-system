@@ -69,7 +69,7 @@ class BaseWindow(QMainWindow):
         # === GUEST MODE PAGES ===
         # 0: Authentication
         self.auth_view = AuthenticationView()
-        self.auth_view.authentication_success.connect(self.on_authentication_success)
+        #self.auth_view.authentication_success.connect(self.on_authentication_success)
         self.pages.addWidget(self.auth_view)
         
         # 1: Enrollment
@@ -92,7 +92,10 @@ class BaseWindow(QMainWindow):
         
         content_layout.addWidget(self.pages)
         self.main_layout.addWidget(self.content_area)
-        
+        self.auth_view.authentication_success.connect(self.on_authentication_success)
+        self.auth_view.fail_count_changed.connect(
+            self.dashboard_view.update_live_fail_count
+        )
         # Mapping nav_key -> (page_index, page_title)
         self.page_map = {
             # Guest mode
@@ -124,6 +127,8 @@ class BaseWindow(QMainWindow):
 
     def switch_to_auth(self):
         """Programmatically switch to Auth từ Enrollment success"""
+        self.dashboard_view.reset_session_fails()
+    
         self.switch_to_page("auth")
         self.auth_view.start_authentication()
 
@@ -144,6 +149,8 @@ class BaseWindow(QMainWindow):
         
         # Dừng camera
         self.auth_view.stop_authentication()
+        
+        self.dashboard_view.reset_session_fails()
         
         # Lưu trạng thái authenticated
         self.is_authenticated = True
