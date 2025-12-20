@@ -5,7 +5,6 @@ from PySide6.QtGui import QIcon, QGuiApplication
 from UI.styles import Theme
 from UI.enrollment.enroll_ui import EnrollmentView
 from UI.authentication.auth_ui import AuthenticationView
-from UI.authentication.success_view import SuccessView
 from UI.dashboard.dashboard_ui import DashboardView
 from UI.profile.profile_ui import ProfileView
 from UI.about.about_ui import AboutView

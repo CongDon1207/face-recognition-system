@@ -8,9 +8,9 @@ from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QWidget
 
 from UI.styles import Theme
-from common.camera import CameraThread
+from modules.camera import CameraThread
 from modules.ai.face_analyzer import DistanceStatus, PoseType
-from common.workers.enroll_worker import FaceProcessingThread
+from UI.workers.enroll_worker import FaceProcessingThread
 from .capture_ui import CaptureStepUI
 
 

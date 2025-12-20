@@ -19,7 +19,7 @@ FaceRecognitionSystem/
 │   │   ├── auth_ui.py              # Giao diện Authentication
 │   │   ├── auth_panel.py           # Panel camera + HUD + status
 │   │   ├── auth_view_logic.py      # Logic UI xac thuc (progress, lockout, overlay)
-│   │   └── success_view.py         # (Legacy - không dùng nữa)
+│   │   └── liveness.py             # Panel/bước hiển thị liveness
 │   ├── 📁 enrollment/              # Module đăng ký khuôn mặt
 │   │   ├── enroll_ui.py            # Manager 3-step wizard
 │   │   └── 📁 steps/
@@ -34,22 +34,21 @@ FaceRecognitionSystem/
 │   │   └── profile_ui.py           # Hiển thị thông tin user đang đăng nhập
 │   ├── 📁 about/                   # Trang About
 │   │   └── about_ui.py             # Thông tin ứng dụng
+│   ├── 📁 workers/                 # Qt Background Threads (Presentation Layer support)
+│   │   ├── auth_worker.py          # Worker cho Authentication
+│   │   └── enroll_worker.py        # Worker cho Enrollment
 │   └── 📁 assets/                  # Tài nguyên (icon, hình ảnh)
 │       ├── 📁 icons/
 │       └── 📁 images/
 │
-├── 📁 modules/                     # Business logic
-│   ├── 📁 ai/                      # Lớp AI Processing
+├── 📁 modules/                     # Business Logic + Data Access Layer
+│   ├── 📁 ai/                      # Lớp AI Processing (Business Logic)
 │   │   ├── face_analyzer.py    # FaceAnalyzer core
+│   │   ├── liveness_detector.py # Liveness detection
 │   │   └── pose_logic.py       # Thuật toán head pose
-│   ├── database.py                 # SQLite Manager (users, embeddings, events)
-│   └── authenticator.py            # Logic so khớp khuôn mặt
-│
-├── 📁 common/                      # Tiện ích dùng chung
-│   ├── camera.py                   # Đọc webcam
-│   └── 📁 workers/                 # Các Worker Thread chạy ngầm (Qt)
-│       ├── auth_worker.py      # Worker cho Authentication
-│       └── enroll_worker.py    # Worker cho Enrollment (đổi tên từ face_processing_thread)
+│   ├── database.py                 # Data Access: SQLite Manager (users, embeddings, events)
+│   ├── camera.py                   # Data Access: CameraThread đọc webcam
+│   └── authenticator.py            # Business Logic: So khớp khuôn mặt
 │
 ├── 📁 data/                        # Dữ liệu runtime
 ├── 📁 docs/                        # Tài liệu dự án
@@ -59,6 +58,14 @@ FaceRecognitionSystem/
 ```
 
 ## 🎯 Mô tả chi tiết
+
+### 0. Kiến trúc 3 lớp (Layered Architecture)
+Hệ thống tuân theo kiến trúc phân lớp rõ ràng:
+- **Presentation Layer**: `UI/` - Giao diện người dùng, bao gồm cả Qt workers hỗ trợ background processing
+- **Business Logic Layer**: `modules/ai/`, `modules/authenticator.py` - Xử lý logic nghiệp vụ, AI, so khớp
+- **Data Access Layer**: `modules/database.py`, `modules/camera.py` - Quản lý cơ sở dữ liệu và truy cập camera
+
+Các lớp chỉ giao tiếp trực tiếp với lớp liền kề, đảm bảo phân tách rõ ràng và dễ bảo trì.
 
 ### 1. Entry Point
 - **main.py**: Khởi tạo QApplication và hiển thị BaseWindow
@@ -76,20 +83,27 @@ FaceRecognitionSystem/
     - **face_processing_thread.py**: QThread xử lý AI không block UI
   - **steps/success_step.py**: Màn hình xác nhận thành công
 
-### 3. Business Logic (`modules/`)
-- **database.py**: 
-  - `DatabaseManager` - CRUD cho users, embeddings
-  - Foreign key enforcement, transaction safety
-- **face_analyzer.py**:
+### 3. Business Logic + Data Access Layer (`modules/`)
+**Business Logic:**
+- **authenticator.py**: Logic so khớp khuôn mặt
+- **ai/face_analyzer.py**:
   - `FaceAnalyzer` - detect mặt (InsightFace), kiểm tra distance/pose, trích embedding
   - `PoseType` enum: FRONTAL, LEFT, RIGHT, UP, DOWN
   - `DistanceStatus` enum: OK, TOO_FAR, TOO_CLOSE, NO_FACE
-- **pose_logic.py**:
+- **ai/liveness_detector.py**: Kiểm tra tính "sống" của khuôn mặt (anti-spoofing)
+- **ai/pose_logic.py**:
   - `check_pose_logic()` - tính geometric ratio (h_ratio, v_ratio) từ MediaPipe landmarks
   - Stability checking để tránh false positive
 
-### 4. Common Utilities (`common/`)
-- **camera.py**: `CameraThread` - QThread emit `frame_captured(np.ndarray)` mỗi frame
+**Data Access Layer:**
+- **database.py**: 
+  - `DatabaseManager` - CRUD cho users, embeddings, events
+  - Foreign key enforcement, transaction safety
+- **camera.py**: `CameraThread` - QThread đọc webcam, emit `frame_captured(np.ndarray)` mỗi frame
+
+### 4. UI Workers (`UI/workers/`)
+- **auth_worker.py**: Qt background thread xử lý AI cho màn Authentication
+- **enroll_worker.py**: Qt background thread xử lý AI cho màn Enrollment
 
 ### 5. Data (`data/`)
 - **faces.db**: SQLite với 3 bảng:

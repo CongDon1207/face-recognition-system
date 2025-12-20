@@ -10,8 +10,8 @@ from PySide6.QtCore import Qt, Signal, QTimer
 from UI.styles import Theme
 import numpy as np
 import time
-from common.camera import CameraThread
-from common.workers.auth_worker import AuthWorker
+from modules.camera import CameraThread
+from UI.workers.auth_worker import AuthWorker
 from UI.authentication.auth_panel import AuthCameraPanel
 from UI.authentication.auth_view_logic import AuthViewLogic
 
@@ -41,9 +41,9 @@ class AuthenticationView(QWidget):
         # Liveness passed state
         self.liveness_passed = False
         self.liveness_passed_time = None
-        self.liveness_delay = 2.0  # Delay 2s truoc khi bat dau face recognition
+        self.liveness_delay = 2.0  # Delay 2s trước khi bắt đầu face recognition
         self.face_recognition_timeout = 10.0  # Timeout 10s cho face recognition
-        self.authentication_completed = False  # Co ket qua authentication roi (success/fail)
+        self.authentication_completed = False  # Có kết quả authentication rồi (success/fail)
         
         # NEW: Timeout UI state
         self.is_locked = False  # Khóa tạm thời sau khi fail quá nhiều
@@ -162,7 +162,7 @@ class AuthenticationView(QWidget):
         )
         progress_container.addWidget(self.liveness_progress, alignment=Qt.AlignCenter)
         
-        # Label hien thi so buoc
+        # Label hiển thị số bước
         self.progress_label = QLabel("Step: 0/4")
         self.progress_label.setAlignment(Qt.AlignCenter)
         self.progress_label.setStyleSheet(f"color: {Theme.TEXT_GRAY}; font-size: 11px;")
@@ -195,7 +195,7 @@ class AuthenticationView(QWidget):
         
     def toggle_authentication(self):
         if self.is_locked:
-            self.status_message.setText("Vui long doi truoc khi thu lai")
+            self.status_message.setText("Vui lòng đợi trước khi thử lại")
             return
             
         if not self.is_checking:

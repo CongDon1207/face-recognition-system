@@ -1,3 +1,8 @@
+""" 
+Panel hiển thị các chỉ số và tiến trình kiểm tra liveness.
+Bao gồm: EAR, Pose angles, Texture analysis, các frame xử lý.
+"""
+
 from PySide6.QtWidgets import (QWidget, QVBoxLayout, QHBoxLayout, QLabel, 
                                QFrame, QGridLayout, QScrollArea)
 from PySide6.QtCore import Qt, Signal
@@ -7,7 +12,7 @@ import cv2
 import numpy as np
 
 
-class LivenessDebugPanel(QWidget):
+class LivenessPanel(QWidget):
     """
     Panel hiển thị chi tiết các bước xử lý chống giả mạo
     Bao gồm: EAR, Pose angles, Texture analysis, các frame xử lý
@@ -15,7 +20,7 @@ class LivenessDebugPanel(QWidget):
     
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle("Liveness Detection - Debug Panel")
+        self.setWindowTitle("Liveness Verification")
         self.setMinimumSize(1200, 800)
         self.init_ui()
         
@@ -25,7 +30,7 @@ class LivenessDebugPanel(QWidget):
         main_layout.setSpacing(15)
         
         # Header
-        header = QLabel("🔍 LIVENESS DETECTION DEBUG PANEL")
+        header = QLabel("🔍 LIVENESS VERIFICATION")
         header.setAlignment(Qt.AlignCenter)
         header.setStyleSheet(f"""
             color: {Theme.PRIMARY};
@@ -449,7 +454,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     app.setStyleSheet(f"QWidget {{ background-color: {Theme.BACKGROUND}; }}")
     
-    panel = LivenessDebugPanel()
+    panel = LivenessPanel()
     panel.show()
     
     # Simulate updates

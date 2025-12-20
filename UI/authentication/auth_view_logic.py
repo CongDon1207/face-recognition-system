@@ -14,7 +14,7 @@ class AuthViewLogic:
         if not view.is_checking or view.auth_worker is None:
             return
         
-        # Neu da co ket qua authentication (success/fail), khong update nua
+        # Nếu đã có kết quả authentication (success/fail), không update nữa
         if view.authentication_completed:
             return
 
@@ -45,7 +45,7 @@ class AuthViewLogic:
         progress_value = int(round((steps_done / 4) * 100))
         view.liveness_progress.setValue(progress_value)
         
-        # Cap nhat progress label
+        # Cập nhật progress label
         if hasattr(view, 'progress_label'):
             step_names = ["Checking", "Challenge", "Verifying", "Complete"]
             current_step = min(steps_done, 3)
@@ -70,7 +70,7 @@ class AuthViewLogic:
         view.liveness_label.setText(f"STATUS: {l_status}")
 
         if l_status in ["SPOOF/FAKE", "SPOOF/VIDEO", "SPOOF/FLAT", "SPOOF/STRONG", "SPOOF/SOFT"]:
-            # Hien thi ly do cu the tu instruction
+            # Hiển thị lý do cụ thể từ instruction
             spoof_msg = instruction if instruction else "WARNING: SPOOF DETECTED!"
             view.status_message.setText(spoof_msg)
             view.status_message.setStyleSheet(
@@ -80,9 +80,9 @@ class AuthViewLogic:
             )
             return
 
-        # Neu chua xac thuc xong (PROCESSING) -> hien thi instruction, KHONG check distance
+        # Nếu chưa xác thực xong (PROCESSING) -> hiển thị instruction, KHÔNG check distance
         if not is_real or l_status == "PROCESSING":
-            # Reset liveness passed state neu dang processing
+            # Reset liveness passed state nếu đang processing
             view.liveness_passed = False
             view.liveness_passed_time = None
             
@@ -97,13 +97,13 @@ class AuthViewLogic:
         # === LIVENESS PASSED - Bat dau qua trinh face recognition ===
         now = time.time()
         
-        # Lan dau pass liveness -> ghi nhan thoi gian
+        # Lần đầu pass liveness -> ghi nhận thời gian
         if not view.liveness_passed:
             view.liveness_passed = True
             view.liveness_passed_time = now
-            print(f"[AuthView] Liveness PASSED! Bat dau delay 2s truoc khi face recognition")
+            print(f"[AuthView] Liveness PASSED! Bắt đầu delay 2s trước khi face recognition")
         
-        # Tinh thoi gian da troi qua ke tu khi pass liveness
+        # Tính thời gian đã trôi qua kể từ khi pass liveness
         time_since_liveness = now - view.liveness_passed_time
         
         # Check timeout 10s cho face recognition
@@ -117,13 +117,13 @@ class AuthViewLogic:
                 f"background-color: rgba(255, 50, 50, 50); border-radius: 8px; padding: 8px; "
                 f"border: 1px solid {Theme.DANGER_RED};"
             )
-            self.on_timeout_warning("TIMEOUT! Face recognition that bai")
+            self.on_timeout_warning("TIMEOUT! Xác thực khuôn mặt thất bại")
             return
         
-        # Delay 2s - hien thi text "Dang xac thuc khuon mat..."
+        # Delay 2s - hiển thị text "Đang xác thực khuôn mặt..."
         if time_since_liveness < view.liveness_delay:
             remaining = view.liveness_delay - time_since_liveness
-            view.status_message.setText(f"Liveness OK! Xac thuc khuon mat trong {remaining:.1f}s...")
+            view.status_message.setText(f"Liveness OK! Xác thực khuôn mặt trong {remaining:.1f}s...")
             view.status_message.setStyleSheet(
                 f"color: {Theme.SECONDARY_GREEN}; font-size: 13px; font-weight: bold; "
                 f"background-color: rgba(0, 0, 0, 180); border-radius: 8px; padding: 8px; "
@@ -131,7 +131,7 @@ class AuthViewLogic:
             )
             return
 
-        # === SAU DELAY 2s - Check distance va face recognition ===
+        # === SAU DELAY 2s - Check distance và face recognition ===
         if dist_status == DistanceStatus.TOO_FAR:
             view.status_message.setText("Move closer to camera")
             view.status_message.setStyleSheet(
@@ -233,7 +233,7 @@ class AuthViewLogic:
 
     def on_auth_result(self, success, user_id, distance):
         view = self.view
-        view.authentication_completed = True  # Danh dau da co ket qua
+        view.authentication_completed = True  # Đánh dấu đã có kết quả
         view.liveness_passed = False  # Reset state
         
         if success:

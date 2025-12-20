@@ -58,7 +58,7 @@ class LivenessDetector:
         self.challenge_stable_frames = 0
         self.challenge_stable_required = 2  # Can 2 frames lien tiep de xac nhan
         self.last_h_ratio = None
-        self.waiting_for_neutral = False  # Doi user quay ve frontal sau khi hoan thanh challenge
+        self.waiting_for_neutral = False  # Đợi user quay về frontal sau khi hoàn thành challenge
         
         self.spoof_detected = False
         self.prev_gray = None
@@ -261,21 +261,21 @@ class LivenessDetector:
 
     def check_head_movement_ratio(self, mesh_coords, width, height, direction=None):
         """
-        Kiem tra xoay dau bang geometric ratio (giong enrollment).
-        Thay the check_head_movement cu dung Euler angles.
+        Kiểm tra xoay đầu bằng geometric ratio (giống enrollment).
+        Thay thế check_head_movement cũ dùng Euler angles.
         """
         h_ratio, v_ratio = calculate_pose_ratio(mesh_coords, width, height)
         if h_ratio is None:
             self.challenge_stable_frames = 0
             return False
         
-        # Luu h_ratio de debug
+        # Lưu h_ratio để debug
         self.last_h_ratio = h_ratio
         
         cfg_left = RATIO_THRESHOLDS["left"]
         cfg_right = RATIO_THRESHOLDS["right"]
         
-        # Them hysteresis de on dinh (lon hon enrollment vi auth can de hon)
+        # Thêm hysteresis để ổn định (lớn hơn enrollment vì auth cần dễ hơn)
         hysteresis = 0.3
         
         is_left = h_ratio > (cfg_left["h_min"] - hysteresis)
@@ -284,12 +284,12 @@ class LivenessDetector:
         # Check V-ratio lax
         v_ok = v_ratio is None or (0.1 <= v_ratio <= 0.9)
         
-        # Stability: can nhieu frames lien tiep de xac nhan
+        # Stability: cần nhiều frames liên tiếp để xác nhận
         if direction == 'LEFT':
             if is_left and v_ok:
                 self.challenge_stable_frames += 1
                 if self.challenge_stable_frames >= self.challenge_stable_required:
-                    print(f"[HEAD MOVE] Quay TRAI phat hien (h_ratio: {h_ratio:.2f}, stable: {self.challenge_stable_frames})")
+                    print(f"[HEAD MOVE] Quay TRÁI phát hiện (h_ratio: {h_ratio:.2f}, stable: {self.challenge_stable_frames})")
                     return True
             else:
                 self.challenge_stable_frames = 0
@@ -299,33 +299,33 @@ class LivenessDetector:
             if is_right and v_ok:
                 self.challenge_stable_frames += 1
                 if self.challenge_stable_frames >= self.challenge_stable_required:
-                    print(f"[HEAD MOVE] Quay PHAI phat hien (h_ratio: {h_ratio:.2f}, stable: {self.challenge_stable_frames})")
+                    print(f"[HEAD MOVE] Quay PHẢI phát hiện (h_ratio: {h_ratio:.2f}, stable: {self.challenge_stable_frames})")
                     return True
             else:
                 self.challenge_stable_frames = 0
             return False
         
-        # Khong co direction cu the - check ca hai
+        # Không có direction cụ thể - check cả hai
         updated = False
         if is_left and v_ok and "LEFT" not in self.moves_completed:
             self.moves_completed.append("LEFT")
             updated = True
-            print(f"[HEAD MOVE] Quay TRAI phat hien (h_ratio: {h_ratio:.2f})")
+            print(f"[HEAD MOVE] Quay TRÁI phát hiện (h_ratio: {h_ratio:.2f})")
         elif is_right and v_ok and "RIGHT" not in self.moves_completed:
             self.moves_completed.append("RIGHT")
             updated = True
-            print(f"[HEAD MOVE] Quay PHAI phat hien (h_ratio: {h_ratio:.2f})")
+            print(f"[HEAD MOVE] Quay PHẢI phát hiện (h_ratio: {h_ratio:.2f})")
         
         return updated or all(m in self.moves_completed for m in ['LEFT', 'RIGHT'])
 
     def check_head_movement(self, yaw_raw, direction=None):
-        """Legacy method - giu lai de tuong thich nguoc"""
+        """Legacy method - giữ lại để tương thích ngược"""
         current_yaw = np.degrees(yaw_raw) if yaw_raw is not None else 0
         
         if self.yaw_offset is None:
             if abs(current_yaw) < 10:
                 self.yaw_offset = current_yaw
-                print("[CALIB] Yaw offset da duoc set")
+                print("[CALIB] Yaw offset đã được set")
             return False
             
         diff = current_yaw - self.yaw_offset
@@ -335,11 +335,11 @@ class LivenessDetector:
         if actual_yaw > self.head_move_threshold and "RIGHT" not in self.moves_completed:
             self.moves_completed.append("RIGHT")
             updated = True
-            print(f"[HEAD MOVE] Quay PHAI phat hien (yaw: {actual_yaw:.1f} do)")
+            print(f"[HEAD MOVE] Quay PHẢI phát hiện (yaw: {actual_yaw:.1f} độ)")
         elif actual_yaw < -self.head_move_threshold and "LEFT" not in self.moves_completed:
             self.moves_completed.append("LEFT")
             updated = True
-            print(f"[HEAD MOVE] Quay TRAI phat hien (yaw: {actual_yaw:.1f} do)")
+            print(f"[HEAD MOVE] Quay TRÁI phát hiện (yaw: {actual_yaw:.1f} độ)")
         
         if direction:
             return direction in self.moves_completed
@@ -481,9 +481,9 @@ class LivenessDetector:
         if has_moire and "MOIRE" not in self.soft_spoof_reasons:
             self.soft_spoof_score += 1
             self.soft_spoof_reasons.append("MOIRE")
-            print(f"[SPOOF SOFT +1] MOIRE (phat hien pattern man hinh)")
+            print(f"[SPOOF SOFT +1] MOIRE (phát hiện pattern màn hình)")
         
-        # Kiem tra texture - bo dieu kien lighting_quality == GOOD
+        # Kiểm tra texture - bỏ điều kiện lighting_quality == GOOD
         if not is_texture_real and "LOW_TEXTURE" not in self.soft_spoof_reasons:
             self.soft_spoof_score += 1
             self.soft_spoof_reasons.append("LOW_TEXTURE")
@@ -550,7 +550,7 @@ class LivenessDetector:
                     self.ear_close = self.ear_open * 0.6
                     self.ear_threshold = (self.ear_open + self.ear_close) / 2
                     self.ear_calibrated = True
-                    print(f"[CALIBRATED] EAR hoàn tất | open: {self.ear_open:.3f} | threshold: {self.ear_threshold:.3f}")
+                    print(f"[CALIBRATED] EAR hoàn tất | mở: {self.ear_open:.3f} | ngưỡng: {self.ear_threshold:.3f}")
 
             blink_detected = False
             if self.ear_calibrated and not self.is_under_flash_effect():
@@ -560,11 +560,11 @@ class LivenessDetector:
                         self.last_yaw_at_blink = current_yaw_deg
                 else:
                     if self.is_blinking:
-                        # Don gian hoa - chap nhan nhay mat truc tiep
-                        # Cac check anti-replay khac (depth, temporal) da du
+                        # Đơn giản hóa - chấp nhận nháy mắt trực tiếp
+                        # Các check anti-replay khác (depth, temporal) đã đủ
                         self.blink_count += 1
                         blink_detected = True
-                        print(f"[BLINK] Phat hien nhay mat | Count: {self.blink_count}/{self.required_blink_count}")
+                        print(f"[BLINK] Phát hiện nháy mắt | Count: {self.blink_count}/{self.required_blink_count}")
                         self.is_blinking = False
 
             if self.blink_count >= self.required_blink_count:
@@ -613,15 +613,15 @@ class LivenessDetector:
                     instruction = "Phản ứng quá chậm"
                     print("[SPOOF STRONG] CHALLENGE_TIMEOUT - quá chậm")
                 else:
-                    # Check neu dang doi user quay ve frontal
+                    # Check nếu đang đợi user quay về frontal
                     if self.waiting_for_neutral:
                         h_ratio, v_ratio = calculate_pose_ratio(mesh_coords, w, h) if mesh_coords else (None, None)
-                        # Kiem tra co phai frontal khong (h_ratio gan 1.0)
+                        # Kiểm tra có phải frontal không (h_ratio gần 1.0)
                         if h_ratio and 0.7 <= h_ratio <= 1.3:
                             self.waiting_for_neutral = False
-                            print(f"[NEUTRAL] User da quay ve frontal (h_ratio: {h_ratio:.2f}), bat dau challenge moi")
+                            print(f"[NEUTRAL] User đã quay về frontal (h_ratio: {h_ratio:.2f}), bắt đầu challenge mới")
                         else:
-                            # Doi im lang, khong hien thi gi ca
+                            # Đợi im lặng, không hiển thị gì cả
                             status = "PROCESSING"
                             return is_really_real, score, {
                                 "status": status,
@@ -636,11 +636,11 @@ class LivenessDetector:
                                 "soft_reasons": self.soft_spoof_reasons
                             }
                     
-                    instruction = f"Hay {current_challenge.replace('TURN_LEFT', 'quay trai').replace('TURN_RIGHT', 'quay phai').replace('BLINK', 'nhay mat').replace('_TWICE', ' hai lan')}"
+                    instruction = f"Hãy {current_challenge.replace('TURN_LEFT', 'quay trái').replace('TURN_RIGHT', 'quay phải').replace('BLINK_TWICE', 'nháy mắt hai lần').replace('BLINK', 'nháy mắt một lần')}"
                     
                     completed = False
                     if 'TURN_LEFT' in current_challenge:
-                        # Dung geometric ratio thay vi euler angles
+                        # Dùng geometric ratio thay vì euler angles
                         if mesh_coords and self.check_head_movement_ratio(mesh_coords, w, h, 'LEFT'):
                             completed = True
                     elif 'TURN_RIGHT' in current_challenge:
@@ -661,12 +661,12 @@ class LivenessDetector:
                             self.challenge_time = 0
                             self.blink_count = 0
                             self.challenge_stable_frames = 0  # Reset stability counter
-                            self.moves_completed = []  # Reset tat ca moves, khong phan biet TURN hay BLINK
+                            self.moves_completed = []  # Reset tất cả moves, không phân biệt TURN hay BLINK
                             
-                            # Neu la TURN challenge, doi user quay ve frontal truoc khi bat dau challenge moi
+                            # Nếu là TURN challenge, đợi user quay về frontal trước khi bắt đầu challenge mới
                             if 'TURN' in current_challenge:
                                 self.waiting_for_neutral = True
-                                print(f"[WAITING] Doi user quay ve frontal truoc khi bat dau challenge tiếp theo")
+                                print(f"[WAITING] Đợi user quay về frontal trước khi bắt đầu challenge tiếp theo")
                 
                 status = "PROCESSING"
             else:
