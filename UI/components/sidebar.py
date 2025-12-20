@@ -1,4 +1,4 @@
-from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QButtonGroup
+from PySide6.QtWidgets import QFrame, QVBoxLayout, QHBoxLayout, QLabel, QPushButton, QButtonGroup, QWidget
 from PySide6.QtCore import Qt, Signal
 from UI.styles import Theme
 
@@ -77,19 +77,64 @@ class Sidebar(QFrame):
     def setup_footer(self):
         footer_frame = QFrame()
         footer_frame.setObjectName("status_bar")
-        footer_frame.setFixedHeight(60)
-        layout = QHBoxLayout(footer_frame)
-        layout.setContentsMargins(20, 10, 20, 10)
+        footer_frame.setFixedHeight(180)  # Tăng thêm chút chiều cao cho chữ to
+        layout = QVBoxLayout(footer_frame)
+        layout.setContentsMargins(20, 15, 20, 15)
+        layout.setSpacing(8)
+        
+        # Status
+        status_layout = QHBoxLayout()
+        status_layout.setSpacing(10)
         
         status_dot = QLabel("●")
         status_dot.setObjectName("status_dot")
+        status_dot.setStyleSheet("font-size: 14px;") # Dot to hơn
         
         status_label = QLabel("SYSTEM ONLINE")
-        status_label.setStyleSheet(f"color: {Theme.TEXT_GRAY}; font-size: 11px; font-weight: bold;")
+        status_label.setStyleSheet(f"color: {Theme.TEXT_GRAY}; font-size: 11px; font-weight: bold; letter-spacing: 1.5px;")
         
-        layout.addWidget(status_dot)
-        layout.addWidget(status_label)
-        layout.addStretch()
+        status_layout.addWidget(status_dot)
+        status_layout.addWidget(status_label)
+        status_layout.addStretch()
+        layout.addLayout(status_layout)
+
+        # Separator line
+        line = QFrame()
+        line.setFixedHeight(1)
+        line.setStyleSheet(f"background-color: {Theme.BORDER_COLOR}; margin: 5px 0px;")
+        layout.addWidget(line)
+        
+        # Members Title
+        members_title = QLabel("NHÓM THỰC HIỆN - NHÓM 4")
+        members_title.setStyleSheet(f"color: {Theme.TEXT_WHITE}; font-size: 12px; font-weight: bold;")
+        layout.addWidget(members_title)
+        
+        # Members List from Proposal.md
+        members = [
+            ("Nguyễn Thị Hồng Thơ", "22151305"),
+            ("Nguyễn Công Đôn", "22133013"),
+            ("Nguyễn Như Hoàng Tiến", "22133061")
+        ]
+        
+        for name, mssv in members:
+            m_container = QWidget()
+            m_vbox = QVBoxLayout(m_container)
+            m_vbox.setContentsMargins(0, 0, 0, 0)
+            m_vbox.setSpacing(2)
+            
+            # Line 1: Name and MSSV
+            m_top_layout = QHBoxLayout()
+            m_label = QLabel(name)
+            m_label.setStyleSheet(f"color: {Theme.TEXT_GRAY}; font-size: 14px; font-weight: 700;")
+            m_mssv = QLabel(mssv)
+            m_mssv.setStyleSheet(f"color: {Theme.TEXT_GRAY}; font-size: 14px; opacity: 0.8;")
+            
+            m_top_layout.addWidget(m_label)
+            m_top_layout.addStretch()
+            m_top_layout.addWidget(m_mssv)
+            m_vbox.addLayout(m_top_layout)
+            
+            layout.addWidget(m_container)
         
         self.layout.addWidget(footer_frame)
 
