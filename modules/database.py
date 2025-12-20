@@ -40,6 +40,9 @@ class DatabaseManager:
                 CREATE TABLE IF NOT EXISTS users (
                     id TEXT PRIMARY KEY,
                     fullname TEXT NOT NULL,
+                    email TEXT,
+                    phone TEXT,
+                    dob TEXT,
                     avatar_path TEXT,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
                 )
@@ -56,21 +59,33 @@ class DatabaseManager:
                     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
                 )
             """)
+            # Bảng events - lưu logs cho Dashboard
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    event_type TEXT NOT NULL,
+                    user_id TEXT,
+                    result TEXT NOT NULL,
+                    score REAL,
+                    details TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
             conn.commit()
 
-    def add_user(self, user_id: str, fullname: str, avatar_path: str = None) -> bool:
+    def add_user(self, user_id: str, fullname: str, email: str = None, 
+                 phone: str = None, dob: str = None, avatar_path: str = None) -> bool:
         """Thêm người dùng mới vào database."""
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO users (id, fullname, avatar_path) VALUES (?, ?, ?)",
-                    (user_id, fullname, avatar_path)
+                    "INSERT INTO users (id, fullname, email, phone, dob, avatar_path) VALUES (?, ?, ?, ?, ?, ?)",
+                    (user_id, fullname, email, phone, dob, avatar_path)
                 )
                 conn.commit()
             return True
         except sqlite3.IntegrityError:
-            # User ID đã tồn tại
             return False
 
     def add_embedding(self, user_id: str, embedding: np.ndarray, 
@@ -92,10 +107,18 @@ class DatabaseManager:
         """Lấy thông tin người dùng theo ID."""
         with self._get_connection() as conn:
             cursor = conn.cursor()
-            cursor.execute("SELECT id, fullname, avatar_path, created_at FROM users WHERE id = ?", (user_id,))
+            cursor.execute("SELECT id, fullname, email, phone, dob, avatar_path, created_at FROM users WHERE id = ?", (user_id,))
             row = cursor.fetchone()
             if row:
-                return {"id": row[0], "fullname": row[1], "avatar_path": row[2], "created_at": row[3]}
+                return {
+                    "id": row[0], 
+                    "fullname": row[1], 
+                    "email": row[2], 
+                    "phone": row[3], 
+                    "dob": row[4], 
+                    "avatar_path": row[5], 
+                    "created_at": row[6]
+                }
         return None
 
     def get_all_embeddings(self) -> list[tuple[str, np.ndarray]]:
@@ -139,6 +162,9 @@ class DatabaseManager:
         self,
         user_id: str,
         fullname: str,
+        email: str | None,
+        phone: str | None,
+        dob: str | None,
         avatar_path: str | None,
         embeddings_data: list[tuple[np.ndarray, str, str | None]],
     ) -> bool:
@@ -146,15 +172,13 @@ class DatabaseManager:
         Ghi enrollment theo 1 transaction:
         - Thêm user trước
         - Thêm embeddings sau
-        Nếu bất kỳ bước nào fail -> rollback, tránh embeddings mồ côi.
-        embeddings_data: [(embedding, pose_type, image_path), ...]
         """
         try:
             with self._get_connection() as conn:
                 cursor = conn.cursor()
                 cursor.execute(
-                    "INSERT INTO users (id, fullname, avatar_path) VALUES (?, ?, ?)",
-                    (user_id, fullname, avatar_path),
+                    "INSERT INTO users (id, fullname, email, phone, dob, avatar_path) VALUES (?, ?, ?, ?, ?, ?)",
+                    (user_id, fullname, email, phone, dob, avatar_path),
                 )
                 for embedding, pose_type, image_path in embeddings_data:
                     cursor.execute(
@@ -167,5 +191,111 @@ class DatabaseManager:
             return True
         except sqlite3.IntegrityError:
             return False
-        except sqlite3.Error:
+        except sqlite3.Error as e:
+            print(f"DB Error: {e}")
             return False
+
+    # ========== Events (Logs) Methods ==========
+    
+    def add_event(self, event_type: str, user_id: str = None, result: str = "success", 
+                  score: float = None, details: str = None) -> int:
+        """
+        Ghi một event vào bảng logs.
+        event_type: 'enroll', 'auth', 'auth_fail', 'logout'
+        result: 'success', 'fail', 'cancelled'
+        """
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute(
+                """INSERT INTO events (event_type, user_id, result, score, details)
+                   VALUES (?, ?, ?, ?, ?)""",
+                (event_type, user_id, result, score, details)
+            )
+            conn.commit()
+            return cursor.lastrowid
+
+    def get_events(self, limit: int = 50, event_type: str = None) -> list[dict]:
+        """Lấy danh sách events gần nhất (cho Dashboard logs)."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            if event_type:
+                cursor.execute(
+                    """SELECT id, event_type, user_id, result, score, details, created_at 
+                       FROM events WHERE event_type = ? ORDER BY created_at DESC LIMIT ?""",
+                    (event_type, limit)
+                )
+            else:
+                cursor.execute(
+                    """SELECT id, event_type, user_id, result, score, details, created_at 
+                       FROM events ORDER BY created_at DESC LIMIT ?""",
+                    (limit,)
+                )
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": row[0],
+                    "event_type": row[1],
+                    "user_id": row[2],
+                    "result": row[3],
+                    "score": row[4],
+                    "details": row[5],
+                    "created_at": row[6]
+                }
+                for row in rows
+            ]
+
+    def get_stats(self) -> dict:
+        """Lấy thống kê tổng quan cho Dashboard."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            
+            # Tổng số users
+            cursor.execute("SELECT COUNT(*) FROM users")
+            total_users = cursor.fetchone()[0]
+            
+            # Tổng số enroll events
+            cursor.execute("SELECT COUNT(*) FROM events WHERE event_type = 'enroll'")
+            total_enrolls = cursor.fetchone()[0]
+            
+            # Tổng số auth events (thành công)
+            cursor.execute("SELECT COUNT(*) FROM events WHERE event_type = 'auth' AND result = 'success'")
+            total_auth_success = cursor.fetchone()[0]
+            
+            # Tổng số auth events (thất bại)
+            cursor.execute("SELECT COUNT(*) FROM events WHERE event_type = 'auth_fail'")
+            total_auth_fail = cursor.fetchone()[0]
+            
+            # Auth hôm nay
+            cursor.execute("""
+                SELECT COUNT(*) FROM events 
+                WHERE event_type = 'auth' AND result = 'success'
+                AND date(created_at) = date('now')
+            """)
+            auth_today = cursor.fetchone()[0]
+            
+            return {
+                "total_users": total_users,
+                "total_enrolls": total_enrolls,
+                "total_auth_success": total_auth_success,
+                "total_auth_fail": total_auth_fail,
+                "auth_today": auth_today
+            }
+
+    def get_all_users(self) -> list[dict]:
+        """Lấy danh sách tất cả users."""
+        with self._get_connection() as conn:
+            cursor = conn.cursor()
+            cursor.execute("SELECT id, fullname, email, phone, dob, avatar_path, created_at FROM users ORDER BY created_at DESC")
+            rows = cursor.fetchall()
+            return [
+                {
+                    "id": row[0],
+                    "fullname": row[1],
+                    "email": row[2],
+                    "phone": row[3],
+                    "dob": row[4],
+                    "avatar_path": row[5],
+                    "created_at": row[6]
+                }
+                for row in rows
+            ]

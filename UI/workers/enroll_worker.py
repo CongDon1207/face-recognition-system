@@ -5,7 +5,7 @@ Tách riêng để đơn giản hóa UI và giữ file ngắn hơn.
 
 from PySide6.QtCore import QThread, QMutex, QWaitCondition, Signal
 
-from modules.face_analyzer import FaceAnalyzer, DistanceStatus, PoseType
+from modules.ai.face_analyzer import FaceAnalyzer, DistanceStatus, PoseType
 
 
 class FaceProcessingThread(QThread):
@@ -92,5 +92,3 @@ class FaceProcessingThread(QThread):
         """Reset baseline pose khi bắt đầu sequence mới."""
         if self.face_analyzer is not None:
             self.face_analyzer.reset_pose_state()
-
-

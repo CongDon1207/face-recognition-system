@@ -5,10 +5,8 @@ Pose-logic đã được tách sang modules/pose_logic.py.
 
 import os
 from enum import Enum
-
 import numpy as np
-
-from modules.pose_logic import check_pose_logic
+from modules.ai.pose_logic import check_pose_logic
 
 _mp_face_mesh = None
 _insightface_app = None
@@ -41,6 +39,10 @@ FACE_AREA_MAX_RATIO = 0.55
 # Siết khoảng cách tối thiểu riêng cho từng pose (FRONTAL cần gần hơn)
 FACE_AREA_MIN_RATIO_BY_POSE = {
     PoseType.FRONTAL: 0.3,
+    PoseType.LEFT: 0.2,
+    PoseType.RIGHT: 0.2,
+    PoseType.UP: 0.2,
+    PoseType.DOWN: 0.2,
 }
 
 
@@ -142,7 +144,7 @@ class FaceAnalyzer:
                 instruction = "Lại gần hơn!"
             elif dist_status == DistanceStatus.TOO_CLOSE:
                 instruction = "Lùi xa hơn!"
-
+        
         return {
             "has_face": True,
             "distance_status": dist_status,
@@ -151,7 +153,7 @@ class FaceAnalyzer:
             "pose_instruction": instruction,
             "yaw": yaw,
             "embedding": embedding,
-            "face_crop": None,
+            "face_crop": None
         }
 
     def _check_pose_logic(self, frame: np.ndarray, target_pose: PoseType) -> tuple[bool, str, float | None]:

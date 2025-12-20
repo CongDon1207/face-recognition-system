@@ -17,7 +17,7 @@ from PySide6.QtWidgets import (
 )
 
 from UI.styles import Theme
-from modules.face_analyzer import DistanceStatus, PoseType
+from modules.ai.face_analyzer import DistanceStatus, PoseType
 
 
 class CaptureStepUI:
@@ -61,15 +61,18 @@ class CaptureStepUI:
 
         self.instruction_label = QLabel("Đang tải mô hình AI...")
         self.instruction_label.setAlignment(Qt.AlignCenter)
+        self.instruction_label.setFixedWidth(400)  # Giới hạn chiều rộng bằng khung camera
+        self.instruction_label.setWordWrap(True)
         self.instruction_label.setStyleSheet(
-            f"color: {Theme.PRIMARY}; font-size: 22px; font-weight: bold; padding: 15px;"
+            f"color: {Theme.PRIMARY}; font-size: 20px; font-weight: bold; padding: 10px; "
+            f"background-color: rgba(0, 0, 0, 150); border-radius: 8px;"
         )
         shadow = QGraphicsDropShadowEffect()
         shadow.setBlurRadius(15)
         shadow.setColor(QColor(Theme.PRIMARY))
         shadow.setOffset(0, 0)
         self.instruction_label.setGraphicsEffect(shadow)
-        camera_layout.addWidget(self.instruction_label)
+        camera_layout.addWidget(self.instruction_label, alignment=Qt.AlignCenter)
 
         self.distance_label = QLabel("Vui lòng chờ...")
         self.distance_label.setAlignment(Qt.AlignCenter)

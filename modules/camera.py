@@ -45,6 +45,7 @@ class CameraThread(QThread):
         self._cap.set(cv2.CAP_PROP_FPS, 30)
         
         self._running = True
+        print(f"[CameraThread] Started capturing from camera {self.camera_id}")
         while self._running:
             ret, frame = self._cap.read()
             if ret:
