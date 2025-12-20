@@ -7,7 +7,7 @@ from modules.ai.pose_logic import calculate_pose_ratio, RATIO_THRESHOLDS
 
 class LivenessDetector:
     def __init__(self):
-        self.laplacian_base_threshold = 20.0
+        self.laplacian_base_threshold = 25.0 # Tang tu 20 len 25
         self.laplacian_adaptive = True
         self.brightness_compensation = True
         
@@ -29,7 +29,7 @@ class LivenessDetector:
         self.strong_spoof_reason = None
         self.soft_spoof_score = 0
         self.soft_spoof_reasons = []
-        self.SOFT_SPOOF_THRESHOLD = 4  # Giam tu 4 xuong 2 de nhanh hon
+        self.SOFT_SPOOF_THRESHOLD = 4
         
         self.last_yaw_at_blink = None
         self.has_dynamic_movement = False
@@ -45,7 +45,7 @@ class LivenessDetector:
         self.ear_open = None
         self.ear_close = None
         self.ear_threshold = None
-        self.calibration_frames = 15  # Giam tu 30 xuong 15 de nhanh hon
+        self.calibration_frames = 15
 
         self.challenge_list = random.sample(["BLINK", "TURN_LEFT", "TURN_RIGHT", "BLINK_TWICE"], k=3)
         self.current_challenge_index = 0
@@ -56,9 +56,9 @@ class LivenessDetector:
         
         # Stability cho challenges - tranh flicker
         self.challenge_stable_frames = 0
-        self.challenge_stable_required = 2  # Can 2 frames lien tiep de xac nhan
+        self.challenge_stable_required = 2
         self.last_h_ratio = None
-        self.waiting_for_neutral = False  # Đợi user quay về frontal sau khi hoàn thành challenge
+        self.waiting_for_neutral = False
         
         self.spoof_detected = False
         self.prev_gray = None
@@ -78,7 +78,7 @@ class LivenessDetector:
         self.rolling_angle_std_thresh = 0.1
 
         self.moire_threshold = 0.005
-        self.chromatic_thresh = 50.0
+        self.chromatic_thresh = 30.0 # Giam tu 50 xuong 30
         
         self.flash_detection_enabled = True
         self.prev_brightness = None
@@ -108,9 +108,10 @@ class LivenessDetector:
         
         high_freq_energy = np.mean(magnitude_spectrum)
         
-        moire_thresh = 45.0 
+        # Optimized thresholds for better screen detection
+        moire_thresh = 35.0  # Giam tu 45
         if self.lighting_quality == "GOOD":
-            moire_thresh = 40.0
+            moire_thresh = 30.0 # Giam tu 40
             
         return high_freq_energy > moire_thresh
 
