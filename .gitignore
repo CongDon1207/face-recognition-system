@@ -4,3 +4,4 @@ venv/
 HANDOFF.md
 CHANGELOG.md
 data/  
+.*

@@ -1,11 +1,10 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, 
                                QPushButton, QLabel, QStackedWidget, QFrame)
 from PySide6.QtCore import Qt, QSize, QTimer
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QGuiApplication
 from UI.styles import Theme
 from UI.enrollment.enroll_ui import EnrollmentView
 from UI.authentication.auth_ui import AuthenticationView
-from UI.authentication.success_view import SuccessView
 from UI.dashboard.dashboard_ui import DashboardView
 from UI.profile.profile_ui import ProfileView
 from UI.about.about_ui import AboutView
@@ -21,7 +20,7 @@ class BaseWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("NEONGLASS - Biometric Security")
-        self.resize(1280, 800)
+        self._apply_initial_size()
         
         # === Trạng thái phiên ===
         self.is_authenticated = False
@@ -46,6 +45,21 @@ class BaseWindow(QMainWindow):
         # Mặc định: hiển thị trang Authentication
         self.switch_to_page("auth")
 
+    def _apply_initial_size(self):
+        screen = QGuiApplication.primaryScreen()
+        if screen is None:
+            self.resize(1280, 800)
+            return
+        available = screen.availableGeometry()
+        # Kích thước mặc định = 85% màn hình
+        target_width = int(available.width() * 0.85)
+        target_height = int(available.height() * 0.85)
+        self.resize(target_width, target_height)
+        # Căn giữa cửa sổ
+        x = (available.width() - target_width) // 2
+        y = (available.height() - target_height) // 2
+        self.move(x, y)
+
     def setup_sidebar(self):
         self.sidebar = Sidebar()
         self.sidebar.nav_clicked.connect(self.on_nav_clicked)
@@ -69,7 +83,7 @@ class BaseWindow(QMainWindow):
         # === GUEST MODE PAGES ===
         # 0: Authentication
         self.auth_view = AuthenticationView()
-        self.auth_view.authentication_success.connect(self.on_authentication_success)
+        #self.auth_view.authentication_success.connect(self.on_authentication_success)
         self.pages.addWidget(self.auth_view)
         
         # 1: Enrollment
@@ -92,7 +106,10 @@ class BaseWindow(QMainWindow):
         
         content_layout.addWidget(self.pages)
         self.main_layout.addWidget(self.content_area)
-        
+        self.auth_view.authentication_success.connect(self.on_authentication_success)
+        self.auth_view.fail_count_changed.connect(
+            self.dashboard_view.update_live_fail_count
+        )
         # Mapping nav_key -> (page_index, page_title)
         self.page_map = {
             # Guest mode
@@ -124,6 +141,8 @@ class BaseWindow(QMainWindow):
 
     def switch_to_auth(self):
         """Programmatically switch to Auth từ Enrollment success"""
+        self.dashboard_view.reset_session_fails()
+    
         self.switch_to_page("auth")
         self.auth_view.start_authentication()
 
@@ -144,6 +163,8 @@ class BaseWindow(QMainWindow):
         
         # Dừng camera
         self.auth_view.stop_authentication()
+        
+        self.dashboard_view.reset_session_fails()
         
         # Lưu trạng thái authenticated
         self.is_authenticated = True

@@ -92,5 +92,3 @@ class FaceProcessingThread(QThread):
         """Reset baseline pose khi bắt đầu sequence mới."""
         if self.face_analyzer is not None:
             self.face_analyzer.reset_pose_state()
-
-

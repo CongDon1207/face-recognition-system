@@ -8,9 +8,9 @@ from PySide6.QtCore import Signal, Slot
 from PySide6.QtWidgets import QWidget
 
 from UI.styles import Theme
-from common.camera import CameraThread
+from modules.camera import CameraThread
 from modules.ai.face_analyzer import DistanceStatus, PoseType
-from common.workers.enroll_worker import FaceProcessingThread
+from UI.workers.enroll_worker import FaceProcessingThread
 from .capture_ui import CaptureStepUI
 
 
@@ -76,20 +76,27 @@ class CaptureStep(CaptureStepUI, QWidget):
         )
 
         # Fix race condition: dừng thread cũ trước khi tạo mới
-        if self.camera_thread and self.camera_thread.isRunning():
-            self.camera_thread.stop()
+        if self.camera_thread is not None:
+            if self.camera_thread.isRunning():
+                print("[CaptureStep] Stopping old camera thread...")
+                self.camera_thread.stop()
+                self.camera_thread.wait(1000)  # Doi toi da 1s
             self.camera_thread = None
 
-        if self.camera_thread is None:
-            self.camera_thread = CameraThread()
-            self.camera_thread.frame_captured.connect(self._on_frame)
-            self.camera_thread.error_occurred.connect(self._on_camera_error)
-            self.camera_thread.started.connect(self._on_camera_started)
-            self.camera_thread.start()
+        # Tao camera thread moi
+        self.camera_thread = CameraThread()
+        self.camera_thread.frame_captured.connect(self._on_frame)
+        self.camera_thread.error_occurred.connect(self._on_camera_error)
+        self.camera_thread.started.connect(self._on_camera_started)
+        self.camera_thread.start()
+        print("[CaptureStep] Started new camera thread")
 
     def stop(self):
         if self.camera_thread:
+            print("[CaptureStep] Stopping camera thread...")
             self.camera_thread.stop()
+            self.camera_thread.wait(1000)  # Doi toi da 1s
+            self.camera_thread = None
 
     def reset_ui(self):
         self.stop()
