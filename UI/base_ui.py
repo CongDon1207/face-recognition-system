@@ -70,12 +70,21 @@ class BaseWindow(QMainWindow):
         # Container for main content
         self.content_area = QWidget()
         content_layout = QVBoxLayout(self.content_area)
-        content_layout.setContentsMargins(30, 30, 30, 30)
+        content_layout.setContentsMargins(0, 0, 0, 0)
+        content_layout.setSpacing(0)
+        
+        # Header với tên ứng dụng và thông tin thành viên
+        self.setup_app_header(content_layout)
+        
+        # Content container với padding
+        content_container = QWidget()
+        content_container_layout = QVBoxLayout(content_container)
+        content_container_layout.setContentsMargins(30, 20, 30, 30)
         
         # Title of current view
         self.page_title = QLabel("Authentication")
         self.page_title.setStyleSheet(f"color: {Theme.TEXT_WHITE}; font-size: 28px; font-weight: 300;")
-        content_layout.addWidget(self.page_title)
+        content_container_layout.addWidget(self.page_title)
         
         # Stacked Widget for pages
         self.pages = QStackedWidget()
@@ -104,7 +113,9 @@ class BaseWindow(QMainWindow):
         self.about_view = AboutView()
         self.pages.addWidget(self.about_view)
         
-        content_layout.addWidget(self.pages)
+        content_container_layout.addWidget(self.pages)
+        content_layout.addWidget(content_container)
+        
         self.main_layout.addWidget(self.content_area)
         self.auth_view.authentication_success.connect(self.on_authentication_success)
         self.auth_view.fail_count_changed.connect(
@@ -120,6 +131,74 @@ class BaseWindow(QMainWindow):
             "profile": (3, "Profile"),
             "about": (4, "About"),
         }
+
+    def setup_app_header(self, parent_layout):
+        """Tạo header với tên ứng dụng và thông tin thành viên"""
+        header = QFrame()
+        header.setObjectName("app_header")
+        header.setStyleSheet(f"""
+            QFrame#app_header {{
+                background-color: rgba(255, 255, 255, 5);
+                border-bottom: 2px solid {Theme.BORDER_COLOR};
+                border-radius: 0px;
+            }}
+            QLabel {{
+                color: {Theme.TEXT_GRAY};
+                font-size: 11px;
+            }}
+        """)
+        header.setMaximumHeight(80)
+        
+        header_layout = QVBoxLayout(header)
+        header_layout.setContentsMargins(30, 10, 30, 10)
+        header_layout.setSpacing(5)
+        
+        # Tên ứng dụng
+        app_name = QLabel("Hệ Thống Định Danh Sinh Trắc Học Khuôn Mặt")
+        app_name.setStyleSheet(f"color: {Theme.PRIMARY}; font-weight: bold; font-size: 16px;")
+        app_name.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(app_name)
+        
+        # Tên tiếng Anh
+        app_name_en = QLabel("Face Recognition System")
+        app_name_en.setStyleSheet(f"color: {Theme.TEXT_GRAY}; font-size: 12px; font-style: italic;")
+        app_name_en.setAlignment(Qt.AlignmentFlag.AlignCenter)
+        header_layout.addWidget(app_name_en)
+        
+        # Thông tin thành viên
+        team_container = QWidget()
+        team_layout = QHBoxLayout(team_container)
+        team_layout.setContentsMargins(0, 5, 0, 0)
+        
+        team_layout.addStretch()
+        
+        # Danh sách thành viên
+        members = [
+            ("Nguyễn Thị Hồng Thơ", "22151305"),
+            ("Nguyễn Công Đôn", "22133013"),
+            ("Nguyễn Như Hoàng Tiến", "22133061")
+        ]
+        
+        # Label tiêu đề
+        title_label = QLabel("Thành viên:")
+        title_label.setStyleSheet(f"color: {Theme.TEXT_WHITE}; font-weight: bold; font-size: 11px;")
+        team_layout.addWidget(title_label)
+        
+        # Hiển thị từng thành viên
+        for i, (name, mssv) in enumerate(members):
+            if i > 0:
+                separator = QLabel("•")
+                separator.setStyleSheet(f"color: {Theme.BORDER_COLOR}; padding: 0 5px;")
+                team_layout.addWidget(separator)
+            
+            member_label = QLabel(f"{name} ({mssv})")
+            member_label.setStyleSheet(f"color: {Theme.TEXT_GRAY}; font-size: 11px;")
+            team_layout.addWidget(member_label)
+        
+        team_layout.addStretch()
+        header_layout.addWidget(team_container)
+        
+        parent_layout.addWidget(header)
 
     def switch_to_page(self, nav_key: str):
         """Chuyển đến trang theo key"""
