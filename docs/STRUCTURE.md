@@ -17,6 +17,8 @@ FaceRecognitionSystem/
 │   │   └── sidebar.py              # Navigation sidebar (2 mode: guest/authenticated)
 │   ├── 📁 authentication/          # Module xác thực khuôn mặt
 │   │   ├── auth_ui.py              # Giao diện Authentication
+│   │   ├── auth_panel.py           # Panel camera + HUD + status
+│   │   ├── auth_view_logic.py      # Logic UI xac thuc (progress, lockout, overlay)
 │   │   └── success_view.py         # (Legacy - không dùng nữa)
 │   ├── 📁 enrollment/              # Module đăng ký khuôn mặt
 │   │   ├── enroll_ui.py            # Manager 3-step wizard
@@ -51,6 +53,8 @@ FaceRecognitionSystem/
 │
 ├── 📁 data/                        # Dữ liệu runtime
 ├── 📁 docs/                        # Tài liệu dự án
+?   ??? ?? plans/                   # Thiet ke / ke hoach noi bo
+?       ??? 2025-12-19-liveness-progress-design.md
 └── 📁 venv/                        # Môi trường ảo (git ignored)
 ```
 

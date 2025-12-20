@@ -76,11 +76,7 @@ class AuthWorker(QThread):
                             landmarks=current_landmarks,
                             head_pose=current_pose
                         )
-                        if is_real:
-                            if self.auth_start_time is not None:
-                                elapsed = time.time() - self.auth_start_time
-                                print(f"[AuthWorker] LIVENESS SUCCESS! Dừng đếm timeout sau {elapsed:.1f}s")
-                                self.auth_start_time = None
+                        # Khong dung dem timeout khi pass liveness, nhung van giu auth_start_time de hien thi timer
                         # 4. Cập nhật kết quả tổng hợp
                         result.update({
                             "is_real": is_real,
@@ -88,6 +84,7 @@ class AuthWorker(QThread):
                             "liveness_status": liveness_dict["status"],
                             "pose_instruction": liveness_dict["instruction"],
                             "moves_completed": liveness_dict.get("moves_completed", []),
+                            "completed_challenges": liveness_dict.get("completed_challenges", []),
                             "fail_count": self.fail_count,  # NEW: Thêm fail_count vào result
                             "time_elapsed": time.time() - self.auth_start_time if self.auth_start_time else 0  # NEW
                         })

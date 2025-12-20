@@ -1,7 +1,7 @@
 from PySide6.QtWidgets import (QMainWindow, QWidget, QHBoxLayout, QVBoxLayout, 
                                QPushButton, QLabel, QStackedWidget, QFrame)
 from PySide6.QtCore import Qt, QSize, QTimer
-from PySide6.QtGui import QIcon
+from PySide6.QtGui import QIcon, QGuiApplication
 from UI.styles import Theme
 from UI.enrollment.enroll_ui import EnrollmentView
 from UI.authentication.auth_ui import AuthenticationView
@@ -21,7 +21,7 @@ class BaseWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("NEONGLASS - Biometric Security")
-        self.resize(1280, 800)
+        self._apply_initial_size()
         
         # === Trạng thái phiên ===
         self.is_authenticated = False
@@ -45,6 +45,21 @@ class BaseWindow(QMainWindow):
         
         # Mặc định: hiển thị trang Authentication
         self.switch_to_page("auth")
+
+    def _apply_initial_size(self):
+        screen = QGuiApplication.primaryScreen()
+        if screen is None:
+            self.resize(1280, 800)
+            return
+        available = screen.availableGeometry()
+        # Kích thước mặc định = 85% màn hình
+        target_width = int(available.width() * 0.85)
+        target_height = int(available.height() * 0.85)
+        self.resize(target_width, target_height)
+        # Căn giữa cửa sổ
+        x = (available.width() - target_width) // 2
+        y = (available.height() - target_height) // 2
+        self.move(x, y)
 
     def setup_sidebar(self):
         self.sidebar = Sidebar()

@@ -3,6 +3,7 @@ import numpy as np
 import mediapipe as mp
 import time
 import random
+from modules.ai.pose_logic import calculate_pose_ratio, RATIO_THRESHOLDS
 
 class LivenessDetector:
     def __init__(self):
@@ -11,7 +12,7 @@ class LivenessDetector:
         self.brightness_compensation = True
         
         self.blink_threshold = 0.22
-        self.head_move_threshold = 25.0
+        self.head_move_threshold = 20.0
         self.z_std_threshold = 0.02
         
         self.brightness_history = []
@@ -28,7 +29,7 @@ class LivenessDetector:
         self.strong_spoof_reason = None
         self.soft_spoof_score = 0
         self.soft_spoof_reasons = []
-        self.SOFT_SPOOF_THRESHOLD = 3
+        self.SOFT_SPOOF_THRESHOLD = 4  # Giam tu 4 xuong 2 de nhanh hon
         
         self.last_yaw_at_blink = None
         self.has_dynamic_movement = False
@@ -44,14 +45,21 @@ class LivenessDetector:
         self.ear_open = None
         self.ear_close = None
         self.ear_threshold = None
-        self.calibration_frames = 30
+        self.calibration_frames = 15  # Giam tu 30 xuong 15 de nhanh hon
 
         self.challenge_list = random.sample(["BLINK", "TURN_LEFT", "TURN_RIGHT", "BLINK_TWICE"], k=3)
         self.current_challenge_index = 0
         self.challenge_time = 0
-        self.challenge_window = 2.0
+        self.challenge_window = 4.0
         self.completed_challenges = []
         self.required_blink_count = 1
+        
+        # Stability cho challenges - tranh flicker
+        self.challenge_stable_frames = 0
+        self.challenge_stable_required = 2  # Can 2 frames lien tiep de xac nhan
+        self.last_h_ratio = None
+        self.waiting_for_neutral = False  # Doi user quay ve frontal sau khi hoan thanh challenge
+        
         self.spoof_detected = False
         self.prev_gray = None
         self.brightness_buffer = []
@@ -251,13 +259,73 @@ class LivenessDetector:
         except Exception:
             return 0.3
 
+    def check_head_movement_ratio(self, mesh_coords, width, height, direction=None):
+        """
+        Kiem tra xoay dau bang geometric ratio (giong enrollment).
+        Thay the check_head_movement cu dung Euler angles.
+        """
+        h_ratio, v_ratio = calculate_pose_ratio(mesh_coords, width, height)
+        if h_ratio is None:
+            self.challenge_stable_frames = 0
+            return False
+        
+        # Luu h_ratio de debug
+        self.last_h_ratio = h_ratio
+        
+        cfg_left = RATIO_THRESHOLDS["left"]
+        cfg_right = RATIO_THRESHOLDS["right"]
+        
+        # Them hysteresis de on dinh (lon hon enrollment vi auth can de hon)
+        hysteresis = 0.3
+        
+        is_left = h_ratio > (cfg_left["h_min"] - hysteresis)
+        is_right = h_ratio < (cfg_right["h_max"] + hysteresis)
+        
+        # Check V-ratio lax
+        v_ok = v_ratio is None or (0.1 <= v_ratio <= 0.9)
+        
+        # Stability: can nhieu frames lien tiep de xac nhan
+        if direction == 'LEFT':
+            if is_left and v_ok:
+                self.challenge_stable_frames += 1
+                if self.challenge_stable_frames >= self.challenge_stable_required:
+                    print(f"[HEAD MOVE] Quay TRAI phat hien (h_ratio: {h_ratio:.2f}, stable: {self.challenge_stable_frames})")
+                    return True
+            else:
+                self.challenge_stable_frames = 0
+            return False
+            
+        elif direction == 'RIGHT':
+            if is_right and v_ok:
+                self.challenge_stable_frames += 1
+                if self.challenge_stable_frames >= self.challenge_stable_required:
+                    print(f"[HEAD MOVE] Quay PHAI phat hien (h_ratio: {h_ratio:.2f}, stable: {self.challenge_stable_frames})")
+                    return True
+            else:
+                self.challenge_stable_frames = 0
+            return False
+        
+        # Khong co direction cu the - check ca hai
+        updated = False
+        if is_left and v_ok and "LEFT" not in self.moves_completed:
+            self.moves_completed.append("LEFT")
+            updated = True
+            print(f"[HEAD MOVE] Quay TRAI phat hien (h_ratio: {h_ratio:.2f})")
+        elif is_right and v_ok and "RIGHT" not in self.moves_completed:
+            self.moves_completed.append("RIGHT")
+            updated = True
+            print(f"[HEAD MOVE] Quay PHAI phat hien (h_ratio: {h_ratio:.2f})")
+        
+        return updated or all(m in self.moves_completed for m in ['LEFT', 'RIGHT'])
+
     def check_head_movement(self, yaw_raw, direction=None):
-        current_yaw = np.degrees(yaw_raw)
+        """Legacy method - giu lai de tuong thich nguoc"""
+        current_yaw = np.degrees(yaw_raw) if yaw_raw is not None else 0
         
         if self.yaw_offset is None:
             if abs(current_yaw) < 10:
                 self.yaw_offset = current_yaw
-                print("[CALIB] Yaw offset đã được set")
+                print("[CALIB] Yaw offset da duoc set")
             return False
             
         diff = current_yaw - self.yaw_offset
@@ -267,11 +335,15 @@ class LivenessDetector:
         if actual_yaw > self.head_move_threshold and "RIGHT" not in self.moves_completed:
             self.moves_completed.append("RIGHT")
             updated = True
-            print(f"[HEAD MOVE] Quay PHẢI phát hiện (yaw: {actual_yaw:.1f}°)")
+            print(f"[HEAD MOVE] Quay PHAI phat hien (yaw: {actual_yaw:.1f} do)")
         elif actual_yaw < -self.head_move_threshold and "LEFT" not in self.moves_completed:
             self.moves_completed.append("LEFT")
             updated = True
-            print(f"[HEAD MOVE] Quay TRÁI phát hiện (yaw: {actual_yaw:.1f}°)")
+            print(f"[HEAD MOVE] Quay TRAI phat hien (yaw: {actual_yaw:.1f} do)")
+        
+        if direction:
+            return direction in self.moves_completed
+        return updated or all(m in self.moves_completed for m in ['LEFT', 'RIGHT'])
         
         if direction:
             return direction in self.moves_completed
@@ -404,7 +476,20 @@ class LivenessDetector:
 
         is_texture_real, score = self.check_texture(face_img, frame_brightness)
         
-        if self.check_chromatic_aberration(face_img) and self.lighting_quality == "GOOD" and not self.is_under_flash_effect():
+        # Kiem tra moire pattern (man hinh dien thoai/may tinh)
+        has_moire = self.detect_moire_pattern(face_img)
+        if has_moire and "MOIRE" not in self.soft_spoof_reasons:
+            self.soft_spoof_score += 1
+            self.soft_spoof_reasons.append("MOIRE")
+            print(f"[SPOOF SOFT +1] MOIRE (phat hien pattern man hinh)")
+        
+        # Kiem tra texture - bo dieu kien lighting_quality == GOOD
+        if not is_texture_real and "LOW_TEXTURE" not in self.soft_spoof_reasons:
+            self.soft_spoof_score += 1
+            self.soft_spoof_reasons.append("LOW_TEXTURE")
+            print(f"[SPOOF SOFT +1] LOW_TEXTURE (score: {score:.1f})")
+        
+        if self.check_chromatic_aberration(face_img) and not self.is_under_flash_effect():
             if "CHROMATIC" not in self.soft_spoof_reasons:
                 self.soft_spoof_score += 1
                 self.soft_spoof_reasons.append("CHROMATIC")
@@ -434,7 +519,7 @@ class LivenessDetector:
                     "instruction": "Phát hiện hình ảnh"
                 }
             
-            head_moved = self.check_head_movement(head_pose) if head_pose is not None else False
+            head_moved = self.check_head_movement_ratio(mesh_coords, w, h) if mesh_coords else False
             
             if self.prev_depth_delta is not None and head_moved:
                 depth_stability = abs(depth_val - self.prev_depth_delta)
@@ -468,22 +553,18 @@ class LivenessDetector:
                     print(f"[CALIBRATED] EAR hoàn tất | open: {self.ear_open:.3f} | threshold: {self.ear_threshold:.3f}")
 
             blink_detected = False
-            if self.ear_calibrated and len(self.moves_completed) >= 1 and not self.is_under_flash_effect():
+            if self.ear_calibrated and not self.is_under_flash_effect():
                 if ear < self.ear_threshold:
                     if not self.is_blinking:
                         self.is_blinking = True
                         self.last_yaw_at_blink = current_yaw_deg
                 else:
                     if self.is_blinking:
-                        yaw_diff = abs(current_yaw_deg - self.last_yaw_at_blink) if self.last_yaw_at_blink else 0
-                        
-                        if yaw_diff > 0.5:
-                            self.blink_count += 1
-                            blink_detected = True
-                            print(f"[BLINK] Phát hiện nháy mắt hợp lệ (yaw diff: {yaw_diff:.1f}°) | Count: {self.blink_count}/{self.required_blink_count}")
-                        else:
-                            self.video_replay_flag = True
-                            print("[WARNING] Nháy mắt nhưng đầu không di chuyển đủ -> nghi ngờ replay")
+                        # Don gian hoa - chap nhan nhay mat truc tiep
+                        # Cac check anti-replay khac (depth, temporal) da du
+                        self.blink_count += 1
+                        blink_detected = True
+                        print(f"[BLINK] Phat hien nhay mat | Count: {self.blink_count}/{self.required_blink_count}")
                         self.is_blinking = False
 
             if self.blink_count >= self.required_blink_count:
@@ -493,12 +574,7 @@ class LivenessDetector:
 
         if self.strong_spoof_detected:
             status = "SPOOF/STRONG"
-            instruction = f"Phát hiện giả mạo:"
-        elif not is_texture_real and self.lighting_quality == "GOOD":
-            if "LOW_TEXTURE" not in self.soft_spoof_reasons:
-                self.soft_spoof_score += 1
-                self.soft_spoof_reasons.append("LOW_TEXTURE")
-                print(f"[SPOOF SOFT +1] LOW_TEXTURE (score: {score:.1f})")
+            instruction = f"Phát hiện giả mạo: {self.strong_spoof_reason}"
         
         if self.soft_spoof_score >= self.SOFT_SPOOF_THRESHOLD:
             status = "SPOOF/SOFT"
@@ -510,11 +586,11 @@ class LivenessDetector:
                 "SCREEN_FLICKER": "tần số màn hình",
                 "STATIC_FLOW": "không có chuyển động",
                 "CHROMATIC": "sai lệch màu",
-                "LOW_ENTROPY": "hình ảnh quá tĩnh"
+                "LOW_ENTROPY": "hình ảnh quá tĩnh",
+                "MOIRE": "phát hiện màn hình"
             }
             display_reasons = [vietnamese_reasons.get(r, r) for r in self.soft_spoof_reasons[:3]]
-            instruction = f"Phát hiện giả mạo:\n{', '.join(display_reasons)}.\n Vui lòng dùng thiết bị thật và ánh sáng tốt."
-            # instruction = f"Phát hiện: {reasons_str}"
+            instruction = f"Phát hiện giả mạo:\n{', '.join(display_reasons)}.\nVui lòng dùng khuôn mặt thật."
             print(f"[SPOOF SOFT FINAL] Đạt ngưỡng ({self.soft_spoof_score}/{self.SOFT_SPOOF_THRESHOLD}): {reasons_str}")
         elif not self.ear_calibrated:
             status = "PROCESSING"
@@ -528,7 +604,7 @@ class LivenessDetector:
                 
                 time_diff = timestamp - self.challenge_time
                 
-                if time_diff > self.challenge_window + 8:
+                if time_diff > self.challenge_window + 6:
                     self.strong_spoof_detected = True
                     self.strong_spoof_reason = "CHALLENGE_TIMEOUT"
                     self.current_challenge_index = 0
@@ -537,14 +613,38 @@ class LivenessDetector:
                     instruction = "Phản ứng quá chậm"
                     print("[SPOOF STRONG] CHALLENGE_TIMEOUT - quá chậm")
                 else:
-                    instruction = f"Hãy {current_challenge.replace('TURN_LEFT', 'quay trái').replace('TURN_RIGHT', 'quay phải').replace('BLINK', 'nháy mắt').replace('_TWICE', ' hai lần')}"
+                    # Check neu dang doi user quay ve frontal
+                    if self.waiting_for_neutral:
+                        h_ratio, v_ratio = calculate_pose_ratio(mesh_coords, w, h) if mesh_coords else (None, None)
+                        # Kiem tra co phai frontal khong (h_ratio gan 1.0)
+                        if h_ratio and 0.7 <= h_ratio <= 1.3:
+                            self.waiting_for_neutral = False
+                            print(f"[NEUTRAL] User da quay ve frontal (h_ratio: {h_ratio:.2f}), bat dau challenge moi")
+                        else:
+                            # Doi im lang, khong hien thi gi ca
+                            status = "PROCESSING"
+                            return is_really_real, score, {
+                                "status": status,
+                                "instruction": "",
+                                "moves_completed": self.moves_completed,
+                                "completed_challenges": self.completed_challenges,
+                                "blink_count": self.blink_count,
+                                "lighting": self.lighting_quality,
+                                "strong_spoof": self.strong_spoof_detected,
+                                "strong_reason": self.strong_spoof_reason,
+                                "soft_score": self.soft_spoof_score,
+                                "soft_reasons": self.soft_spoof_reasons
+                            }
+                    
+                    instruction = f"Hay {current_challenge.replace('TURN_LEFT', 'quay trai').replace('TURN_RIGHT', 'quay phai').replace('BLINK', 'nhay mat').replace('_TWICE', ' hai lan')}"
                     
                     completed = False
                     if 'TURN_LEFT' in current_challenge:
-                        if self.check_head_movement(head_pose, 'LEFT'):
+                        # Dung geometric ratio thay vi euler angles
+                        if mesh_coords and self.check_head_movement_ratio(mesh_coords, w, h, 'LEFT'):
                             completed = True
                     elif 'TURN_RIGHT' in current_challenge:
-                        if self.check_head_movement(head_pose, 'RIGHT'):
+                        if mesh_coords and self.check_head_movement_ratio(mesh_coords, w, h, 'RIGHT'):
                             completed = True
                     elif 'BLINK' in current_challenge:
                         self.required_blink_count = 2 if 'TWICE' in current_challenge else 1
@@ -560,21 +660,21 @@ class LivenessDetector:
                             self.current_challenge_index += 1
                             self.challenge_time = 0
                             self.blink_count = 0
-                            self.moves_completed = [] if 'TURN' in current_challenge else self.moves_completed
+                            self.challenge_stable_frames = 0  # Reset stability counter
+                            self.moves_completed = []  # Reset tat ca moves, khong phan biet TURN hay BLINK
+                            
+                            # Neu la TURN challenge, doi user quay ve frontal truoc khi bat dau challenge moi
+                            if 'TURN' in current_challenge:
+                                self.waiting_for_neutral = True
+                                print(f"[WAITING] Doi user quay ve frontal truoc khi bat dau challenge tiếp theo")
                 
                 status = "PROCESSING"
             else:
-                if not head_moved:
-                    status = "PROCESSING"
-                    instruction = f"Hãy quay mặt TRÁI và PHẢI"
-                elif self.blink_count < 1:
-                    status = "PROCESSING"
-                    instruction = "Tốt! Bây giờ vừa quay đầu vừa nháy mắt"
-                else:
-                    is_really_real = True
-                    status = "REAL"
-                    instruction = "Xác thực thành công!"
-                    print("[LIVENESS SUCCESS] Người thật - Xác thực thành công!")
+                # Da hoan thanh tat ca challenges -> REAL
+                is_really_real = True
+                status = "REAL"
+                instruction = "Xác thực thành công!"
+                print("[LIVENESS SUCCESS] Người thật - Xác thực thành công!")
         if self.lighting_quality == "VERY_LOW":
             instruction = "VUI LÒNG TĂNG ÁNH SÁNG!" + instruction
         elif self.is_under_flash_effect():
@@ -583,6 +683,7 @@ class LivenessDetector:
             "status": status,
             "instruction": instruction,
             "moves_completed": self.moves_completed,
+            "completed_challenges": self.completed_challenges,
             "blink_count": self.blink_count,
             "lighting": self.lighting_quality,
             "strong_spoof": self.strong_spoof_detected,
@@ -603,8 +704,12 @@ class LivenessDetector:
         self.challenge_list = random.sample(["BLINK", "TURN_LEFT", "TURN_RIGHT", "BLINK_TWICE"], k=3)
         self.current_challenge_index = 0
         self.challenge_time = 0
+        self.challenge_window = 4.0
         self.completed_challenges = []
         self.required_blink_count = 1
+        self.challenge_stable_frames = 0
+        self.last_h_ratio = None
+        self.waiting_for_neutral = False
         self.spoof_detected = False
         self.prev_gray = None
         self.brightness_buffer = []
